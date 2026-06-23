@@ -1,0 +1,7 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_9006.
+  CALL SUBSCREEN ufile INCLUDING sy-repid g_subscr_nn.
+
+PROCESS AFTER INPUT.
+  CALL SUBSCREEN ufile.
+  MODULE user_command_9006.

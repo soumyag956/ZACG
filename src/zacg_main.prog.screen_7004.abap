@@ -1,0 +1,8 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_7004.
+
+PROCESS AFTER INPUT.
+  CHAIN.
+    MODULE validate_7004.
+  ENDCHAIN.
+  MODULE user_command_7004.

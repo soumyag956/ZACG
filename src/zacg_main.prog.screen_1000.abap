@@ -1,0 +1,7 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_1000.
+  CALL SUBSCREEN subscr_1000 INCLUDING sy-repid g_subscr_nr.
+
+PROCESS AFTER INPUT.
+  CALL SUBSCREEN subscr_1000.
+  MODULE user_command_1000.

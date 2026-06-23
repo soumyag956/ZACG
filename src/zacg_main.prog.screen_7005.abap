@@ -1,0 +1,8 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_7005.
+
+PROCESS AFTER INPUT.
+  CHAIN.
+    MODULE validate_7005.
+  ENDCHAIN.
+  MODULE user_command_7005.
