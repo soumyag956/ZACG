@@ -13742,10 +13742,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form emergency_login
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Firefighter (emergency-access) login (screen 7005 / 9033).
+*&
+*& Reads the login reason from the text editor, pings the firefighter
+*& target system (RFC_PING on ZACG_FFID_HDR-FFDST) and opens a remote
+*& session there (SYSTEM_REMOTE_LOGIN). On success it generates a
+*& session id (GUID_CREATE) and writes an active row to the firefighter
+*& log ZACG_FFID_LOG (user, FFID, session, reason, host/IP, timestamps).
+*& Side effect: starts a remote FFID session and logs it.
 *&---------------------------------------------------------------------*
 FORM emergency_login .
 
@@ -13858,10 +13862,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form emergency_logout
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Firefighter (emergency-access) logout (screen 9033).
+*&
+*& For the selected active FFID session (ZACG_FFID_LOG) it asks for
+*& confirmation, terminates the firefighter's sessions on the target
+*& system (TH_DELETE_USER) and closes the log entry (ACTIVE = '',
+*& logout date/time). Side effect: ends the FFID session and updates the
+*& log.
 *&---------------------------------------------------------------------*
 FORM emergency_logout .
 
