@@ -12428,10 +12428,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form populate_data_7001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the "new request" role table (I_OUTTAB_7001) on screen 7001
+*& from the roles selected in S_NROLE, defaulting validity to
+*& today..9999-12-31, and refreshes the table-control line count.
 *&---------------------------------------------------------------------*
 FORM populate_data_7001 .
 
@@ -12451,10 +12450,15 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form raise_new_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Raises a new role access request.
+*&
+*& Draws a request number from number-range object ZACG_RREQ
+*& (NUMBER_GET_NEXT), determines the requester's line manager from
+*& ZACG_MANAGER, and writes one approver row per requested role into
+*& ZACG_REQ_APROVER (status '02' = pending, manager as first approver),
+*& then commits. Finally triggers asynchronous notification
+*& (ZACG_NOTIFY_USERS_FOR_ROLE_REQ, action 'RQ').
+*& Side effect: inserts request/approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM raise_new_request .
 
@@ -12544,10 +12548,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates a single new-request row (screen 7001) before it is added:
+*& checks the From/To dates (present, not in the past, From <= To), that
+*& there is no pending/open request for the same role+user+period
+*& (ZACG_REQ_APROVER) and that the role is not already assigned to the
+*& user for an overlapping period (AGR_USERS). Raises an error and keeps
+*& the cursor on the offending field otherwise.
 *&---------------------------------------------------------------------*
 FORM validate_7001.
 
@@ -12650,10 +12656,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form approve_after_risk_analysis
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Role-owner approval step (from the risk-analysis grid, screen 8007).
+*&
+*& Validates that the current user (SY-UNAME) is the approver for each
+*& selected role, gathers the residual SoD risks for those roles and, if
+*& any risk remains, opens the mitigation pop-up (screen 7002) to capture
+*& mitigation; otherwise flags the request as mitigated. Prepares
+*& I_OUTTAB_7002 (user / risk / mitigation owner) for that pop-up.
 *&---------------------------------------------------------------------*
 FORM approve_after_risk_analysis.
 
@@ -12796,10 +12805,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form assign_after_popup
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Finalises role-owner approval after the mitigation pop-up (screen
+*& 7002).
+*&
+*& Marks the matching ZACG_REQ_APROVER rows as actioned (ACTION_TAKEN,
+*& status '03', next sequence number), writes/updates mitigation records
+*& in ZACG_MITG_LOG (new entry on owner change or first mitigation), and
+*& triggers the workflow notification (ZACG_NOTIFY_USERS_FOR_ROLE_REQ,
+*& action 'RA') with the approved roles and mitigation owners.
+*& Runs only when g_mitigated is set.
+*& Side effect: updates approver and mitigation-log tables.
 *&---------------------------------------------------------------------*
 FORM assign_after_popup .
 
@@ -12959,10 +12974,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form reject_after_risk_anaysis
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Rejection counterpart of approve_after_risk_analysis (from the
+*& risk-analysis grid, screen 8007).
+*&
+*& Validates the current user is the approver, collects the selected
+*& roles into I_OUTTAB_7003 and opens the rejection-reason pop-up
+*& (screen 7003). The actual rejection is committed in reject_after_popup.
 *&---------------------------------------------------------------------*
 FORM reject_after_risk_anaysis .
 
@@ -13057,10 +13074,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form reject_after_popup
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Commits the rejection captured on the screen-7003 pop-up.
+*&
+*& Marks the ZACG_REQ_APROVER row as actioned and inserts a follow-up row
+*& with status 4 (rejected) and the rejection reason, commits, and
+*& triggers the workflow notification (ZACG_NOTIFY_USERS_FOR_ROLE_REQ,
+*& action 'RR') with the rejected roles.
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM reject_after_popup.
 
@@ -13124,10 +13144,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7003
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the rejection-reason pop-up row (screen 7003): the reason
+*& must be supplied and at least 10 characters long. Saves the row back
+*& to I_OUTTAB_7003.
 *&---------------------------------------------------------------------*
 FORM validate_7003 .
   MODIFY i_outtab_7003 FROM wa_outtab_7003 INDEX table_7003-current_line.
