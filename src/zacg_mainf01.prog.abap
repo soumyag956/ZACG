@@ -4786,10 +4786,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_initpw_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Set-Productive-Password
+*& upload: requires an .XLS file whose header row reads
+*& 'User ID' / 'Password'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_initpw_validate .
 
@@ -4966,10 +4965,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_cdrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Change-Role-Description upload
+*& (P_FILE4): requires an .XLS file whose header row reads
+*& 'Role Name' / 'Role Description'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_cdrole_validate .
 
@@ -5277,10 +5275,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_usupd_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Update-User-Details upload
+*& (P_FILE3): requires an .XLS file whose header row reads 'User ID',
+*& 'First Name', 'Last Name', 'Function', 'Department', 'Email ID'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_usupd_validate .
 
@@ -5361,10 +5359,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_drrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Derive-Role upload (P_FILE5):
+*& requires an .XLS file whose header row reads
+*& 'Parent Role' / 'Child Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_drrole_validate .
 
@@ -5792,10 +5789,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_asrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Add-Single-to-Composite upload
+*& (P_FILE7): requires an .XLS file whose header row reads
+*& 'Composite Role' / 'Single Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_asrole_validate .
 
@@ -5856,10 +5852,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form add_single_role_to_composite
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Adds single roles to composite roles from the uploaded Excel file
+*& (P_FILE7, columns Composite Role / Single Role).
+*&
+*& Each row calls PRGN_RFC_ADD_AGRS_TO_COLL_AGR. Per-row status is
+*& collected in GT_COMP_ROLE and shown in the screen-9014 ALV grid.
+*& Side effect: changes composite-role membership in the database.
 *&---------------------------------------------------------------------*
 FORM add_single_role_to_composite .
 
@@ -6036,10 +6034,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_rsrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Remove-Single-from-Composite
+*& upload (P_FILE8): requires an .XLS file whose header row reads
+*& 'Composite Role' / 'Single Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_rsrole_validate .
 
@@ -6100,10 +6097,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form remove_single_from_composite
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Removes single roles from composite roles using the uploaded Excel
+*& file (P_FILE8, columns Composite Role / Single Role).
+*&
+*& Each row calls PRGN_RFC_DEL_AGRS_IN_COLL_AGR. Per-row status is
+*& collected in GT_COMP_ROLE and shown in the screen-9015 ALV grid.
+*& Side effect: changes composite-role membership in the database.
 *&---------------------------------------------------------------------*
 FORM remove_single_from_composite .
 
@@ -6280,10 +6279,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_rmrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Delete-Roles upload (P_FILE9):
+*& requires an .XLS file whose header row reads 'Role Name'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_rmrole_validate .
 
@@ -6339,10 +6337,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form delete_roles
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-deletes roles listed in the uploaded Excel file (P_FILE9,
+*& column Role Name).
+*&
+*& Each row calls PRGN_ACTIVITY_GROUP_DELETE. Per-row status is collected
+*& in GT_DEL_ROLE and shown in the screen-9016 ALV grid.
+*& Side effect: deletes roles from the database.
 *&---------------------------------------------------------------------*
 FORM delete_roles .
 
@@ -6489,10 +6489,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_pmrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Push-Master-Role upload
+*& (P_FILE10): requires an .XLS file whose header row reads 'Role Name'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_pmrole_validate .
 
@@ -6548,10 +6547,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form push_master_role
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Pushes (transfers) authorization data from master roles to their
+*& derived roles for the roles listed in the uploaded Excel file
+*& (P_FILE10, column Role Name).
+*&
+*& Each row calls SUPRN_TRANSFER_AUTH_DATA. Per-row status is shown in
+*& the result ALV grid. Side effect: regenerates derived-role auth data.
 *&---------------------------------------------------------------------*
 FORM push_master_role .
 
@@ -6678,10 +6679,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_ccrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Create-Composite-Role upload
+*& (P_FILE11): requires an .XLS file whose header row reads
+*& 'Role Name' / 'Role Text'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_ccrole_validate .
 
@@ -6742,10 +6742,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_composite_role
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Creates composite roles from the uploaded Excel file (P_FILE11,
+*& columns Role Name / Role Text).
+*&
+*& Implemented via a batch-input (BDC) session against transaction PFCG
+*& (built with bdc_dynpro / bdc_field and run with CALL TRANSACTION).
+*& Per-row status is collected in GT_CCOMP_ROLE and shown in the result
+*& ALV grid. Side effect: creates composite roles in the database.
 *&---------------------------------------------------------------------*
 FORM create_composite_role .
 
@@ -6894,10 +6897,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form bdc_dynpro
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
-*&      --> P_
+*& BDC helper: appends a screen (dynpro start) entry to the batch-input
+*& table GT_BDCTAB.
+*&   -->  IV_PROGRAM  Program name of the screen.
+*&   -->  IV_DYNPRO   Screen (dynpro) number.
 *&---------------------------------------------------------------------*
 FORM bdc_dynpro USING iv_program
                       iv_dynpro.
@@ -6914,10 +6917,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form bdc_field
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
-*&      --> P_
+*& BDC helper: appends a field value entry to the batch-input table
+*& GT_BDCTAB.
+*&   -->  IV_FNAM  Screen field name.
+*&   -->  IV_FVAL  Field value.
 *&---------------------------------------------------------------------*
 FORM bdc_field  USING iv_fnam
                       iv_fval.
@@ -6934,10 +6937,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_user_details
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-updates user master address data (first/last name, function,
+*& department, e-mail) from the uploaded Excel file (P_FILE3).
+*&
+*& Each row calls BAPI_USER_CHANGE with the address structure and its
+*& change-flags. Per-row status is collected in GT_USER_DETAILS and
+*& shown in the screen-9010 ALV grid.
+*& Side effect: changes user master data in the database.
 *&---------------------------------------------------------------------*
 FORM update_user_details .
 
@@ -7135,10 +7141,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form man_role_ad
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Manual role assignment / removal (screen 9020).
+*&
+*& Builds the role list from select-option SO_AROLE with validity dates
+*& P_FVALID..P_TVALID (defaulted to today..9999-12-31). For each user in
+*& SO_CROLE it reads the current assignments (BAPI_USER_GET_DETAIL),
+*& then either appends the roles (RB_ADR = add) or removes them
+*& (RB_DER = remove) and writes them back with
+*& BAPI_USER_ACTGROUPS_ASSIGN, committing the change. Per-user status is
+*& shown in the screen-9020 ALV grid.
+*& Side effect: changes user role assignments in the database.
 *&---------------------------------------------------------------------*
 FORM man_role_ass .
 
@@ -7192,8 +7204,17 @@ FORM man_role_ass .
           activitygroups = lt_act
           return         = lt_ret2.
 
+*     BAPI_USER_ACTGROUPS_ASSIGN does not commit on its own; without this
+*     the assignment / removal is not persisted.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
       ls_role_output-userid = so_crole-low.
-      ls_role_output-role_msg = lt_ret2[ 1 ]-message.
+      READ TABLE lt_ret2 INTO DATA(ls_ret2) INDEX 1.
+      IF sy-subrc = 0.
+        ls_role_output-role_msg = ls_ret2-message.
+      ENDIF.
     ENDIF.
     APPEND ls_role_output TO gt_role_output.
     CLEAR: ls_role_output, lt_act, lt_ret1, lt_ret2.
@@ -7250,10 +7271,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form file_role_ass
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& File-based role assignment / removal (screen 9020).
+*&
+*& Reads the uploaded Excel file (P_FILE13, columns User Name / Role
+*& Name / From Date / To Date / Add-Remove Indicator). For each user it
+*& reads the current assignments (BAPI_USER_GET_DETAIL), applies the
+*& add ('A') or delete ('D') rows (dates converted with
+*& CONVERT_DATE_TO_INTERNAL), writes them back with
+*& BAPI_USER_ACTGROUPS_ASSIGN and commits. Per-user status is shown in
+*& the screen-9020 ALV grid.
+*& Side effect: changes user role assignments in the database.
 *&---------------------------------------------------------------------*
 FORM file_role_ass .
 
@@ -7387,8 +7414,16 @@ FORM file_role_ass .
               activitygroups = lt_act
               return         = lt_ret2.
 
+*         Persist the assignment - the BAPI does not commit on its own.
+          CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+            EXPORTING
+              wait = abap_true.
+
           ls_role_output-userid = lv_uname.
-          ls_role_output-role_msg = lt_ret2[ 1 ]-message.
+          READ TABLE lt_ret2 INTO DATA(ls_ret2) INDEX 1.
+          IF sy-subrc = 0.
+            ls_role_output-role_msg = ls_ret2-message.
+          ENDIF.
           APPEND ls_role_output TO gt_role_output.
           CLEAR: ls_role_output, lt_act, lt_ret1, lt_ret2, lv_uname.
         ENDAT.
