@@ -1,0 +1,175 @@
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:sap="http://www.sap.com/sapxsl" version="1.0">
+
+  <xsl:strip-space elements="*"/>
+  <xsl:template match="/">
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html=
+"http://www.w3.org/TR/REC-html40">
+      <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+        <Author>SAP WebAS</Author>
+        <LastAuthor>Rounak Pal</LastAuthor>
+        <Revision>1</Revision>
+        <Created>2023-09-15T19:03:59Z</Created>
+        <LastSaved>2023-09-15T19:03:29Z</LastSaved>
+        <Version>16.00</Version>
+      </DocumentProperties>
+      <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+        <WindowHeight>14940</WindowHeight>
+        <WindowWidth>21855</WindowWidth>
+        <WindowTopX>32767</WindowTopX>
+        <WindowTopY>32767</WindowTopY>
+        <ProtectStructure>False</ProtectStructure>
+        <ProtectWindows>False</ProtectWindows>
+      </ExcelWorkbook>
+      <Styles>
+        <Style ss:ID="Default" ss:Name="Normal">
+          <Alignment ss:Vertical="Bottom"/>
+          <Borders/>
+          <Font ss:FontName="Arial"/>
+          <Interior/>
+          <NumberFormat/>
+          <Protection/>
+        </Style>
+        <Style ss:ID="s15">
+          <Alignment ss:Vertical="Top"/>
+        </Style>
+        <Style ss:ID="s17">
+          <Alignment ss:Vertical="Top"/>
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <Interior ss:Color="#C0C0C0" ss:Pattern="Solid"/>
+        </Style>
+      </Styles>
+      <Worksheet ss:Name="Sheet1">
+        <Table>
+          <Column ss:StyleID="s15" ss:Width="68.25"/>
+          <Column ss:StyleID="s15" ss:Width="47.25"/>
+          <Column ss:StyleID="s15" ss:Width="535.5"/>
+          <Column ss:StyleID="s15" ss:Width="62.5"/>
+          <Column ss:StyleID="s15" ss:Width="535.5"/>
+          <Column ss:StyleID="s15" ss:Width="73.5"/>
+          <Column ss:StyleID="s15" ss:Width="68.5"/>
+          <Column ss:StyleID="s15" ss:Width="72.5"/>
+          <Column ss:StyleID="s15" ss:Width="52.5"/>
+          <Column ss:StyleID="s15" ss:Width="42"/>
+          <Column ss:StyleID="s15" ss:Width="42"/>
+          <Row>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Role name</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Risk</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Risk Description</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Function</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Function Description</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Transaction</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Object</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Instance</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Field</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Low</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">High</Data>
+            </Cell>
+          </Row>
+          <xsl:for-each select="//LIT_EXCEL/*">
+          <Row>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="AGR_NAME"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="RISK"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="RISKD"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="FUNC"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="FUNCD"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="TCODE"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="OBJECT"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="AUTH"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="FIELD"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="LOW"/>
+              </Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">
+              <xsl:value-of select="HIGH"/>
+              </Data>
+            </Cell>
+          </Row>
+          </xsl:for-each>
+        </Table>
+        <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+          <Print>
+            <ValidPrinterInfo/>
+            <PaperSizeIndex>9</PaperSizeIndex>
+            <HorizontalResolution>600</HorizontalResolution>
+            <VerticalResolution>0</VerticalResolution>
+          </Print>
+          <Selected/>
+          <Panes>
+            <Pane>
+              <Number>3</Number>
+              <ActiveRow>11</ActiveRow>
+              <ActiveCol>2</ActiveCol>
+            </Pane>
+          </Panes>
+          <ProtectObjects>False</ProtectObjects>
+          <ProtectScenarios>False</ProtectScenarios>
+        </WorksheetOptions>
+      </Worksheet>
+    </Workbook>
+  </xsl:template>
+</xsl:transform>
