@@ -1,0 +1,3 @@
+sap.ui.define(["sap/ui/test/opaQunit","zMiscReport/zMiscReport/test/integration/pages/miscRepDashboard"],function(e){"use strict";QUnit.module("Navigation Journey");e("Should see the initial page of the app",function(e,i,o){e.iStartTheApp();i.onTheAppPag+
+e.iLookAtTheScreen();o.onTheAppPage.iShouldSeeTheApp();o.iTeardownMyAppFrame()});e("Should check additional UI elements",function(e,i,o){e.iStartTheApp();i.onTheAppPage.iDoMyAction();o.onTheAppPage.iDoMyAssertion();o.iTeardownMyAppFrame()})});            
+//# sourceMappingURL=navigationJourney.js.map                                                                                                                                                                                                                  

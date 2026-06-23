@@ -1,0 +1,3 @@
+sap.ui.define(["sap/ui/test/Opa5","zMiscReport/zMiscReport/test/integration/pages/Common","sap/ui/test/opaQunit","zMiscReport/zMiscReport/test/integration/pages/miscRepDashboard","zMiscReport/zMiscReport/test/integration/navigationJourney"],function(t,e)+
+{"use strict";t.extendConfig({arrangements:new e,viewNamespace:"zMiscReport.zMiscReport.view.",autoWait:true})});                                                                                                                                              
+//# sourceMappingURL=AllJourneys.js.map                                                                                                                                                                                                                        

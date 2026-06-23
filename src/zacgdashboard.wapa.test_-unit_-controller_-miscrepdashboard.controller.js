@@ -1,0 +1,3 @@
+sap.ui.define(["zMiscReport/zMiscReport/controller/miscRepDashboard.controller"],function(t){"use strict";QUnit.module("miscRepDashboard Controller");QUnit.test("I should test the app controller loads",function(e){var o=new t;var s=o.getMetadata().getNam+
+e();e.ok(s,"zMiscReport/zMiscReport.controller.miscRepDashboard")});QUnit.test("I should test any additional controls",function(t){t.ok(false,"Implement test")})});                                                                                           
+//# sourceMappingURL=miscRepDashboard.controller.js.map                                                                                                                                                                                                        

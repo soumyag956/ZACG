@@ -1,0 +1,3 @@
+{"version":3,"file":"navigationJourney.js","names":["sap","ui","define","opaTest","QUnit","module","Given","When","Then","iStartTheApp","onTheAppPage","iLookAtTheScreen","iShouldSeeTheApp","iTeardownMyAppFrame","iDoMyAction","iDoMyAssertion"],"sources":[+
+"navigationJourney-dbg.js"],"mappings":"AACAA,IAAIC,GAAGC,OAAO,CACb,uBACA,mEACE,SAAUC,GACZ,aAIAC,MAAMC,OAAO,sBAEbF,EAAQ,yCAA0C,SAAUG,EAAOC,EAAMC,GAExEF,EAAMG,eAGNF,EAAKG,aAAaC,mBAElBH,EAAKE,aAAaE,mBAElBJ,EAAKK,qBAEN,GAGAV,EAAQ,sCAAuC,SAAUG,EAAOC,EAAMC,GA+
+ErEF,EAAMG,eAGNF,EAAKG,aAAaI,cAElBN,EAAKE,aAAaK,iBAElBP,EAAKK,qBAEN,EACD","ignoreList":[]}                                                                                                                                                                     

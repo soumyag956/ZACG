@@ -1,0 +1,93 @@
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:sap="http://www.sap.com/sapxsl" version="1.0">
+  <xsl:strip-space elements="*"/>
+  <xsl:template match="/">
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html=
+"http://www.w3.org/TR/REC-html40">
+      <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+        <Author>Rounak Pal</Author>
+        <LastAuthor>Rounak Pal (IN)</LastAuthor>
+        <Created>2015-06-05T18:17:20Z</Created>
+        <LastSaved>2023-10-05T15:53:02Z</LastSaved>
+        <Version>16.00</Version>
+      </DocumentProperties>
+      <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+        <WindowHeight>10800</WindowHeight>
+        <WindowWidth>20460</WindowWidth>
+        <WindowTopX>30</WindowTopX>
+        <WindowTopY>32767</WindowTopY>
+        <ProtectStructure>False</ProtectStructure>
+        <ProtectWindows>False</ProtectWindows>
+      </ExcelWorkbook>
+      <Styles>
+        <Style ss:ID="Default" ss:Name="Normal">
+          <Alignment ss:Vertical="Bottom"/>
+          <Borders/>
+          <Font ss:Color="#000000" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior/>
+          <NumberFormat/>
+          <Protection/>
+        </Style>
+        <Style ss:ID="s62">
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+        </Style>
+        <Style ss:ID="s65">
+          <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <Interior ss:Color="#FFFF00" ss:Pattern="Solid"/>
+        </Style>
+      </Styles>
+      <Worksheet ss:Name="Sheet1">
+        <Table ss:DefaultRowHeight="14.5" ss:ExpandedColumnCount="4" ss:ExpandedRowCount="2" x:FullColumns="1" x:FullRows="1">
+          <Column ss:AutoFitWidth="0" ss:Span="3" ss:Width="62.5"/>
+          <Row>
+            <Cell ss:StyleID="s65">
+              <Data ss:Type="String">Risk ID</Data>
+            </Cell>
+            <Cell ss:StyleID="s65">
+              <Data ss:Type="String">Function1</Data>
+            </Cell>
+            <Cell ss:StyleID="s65">
+              <Data ss:Type="String">Function2</Data>
+            </Cell>
+            <Cell ss:StyleID="s65">
+              <Data ss:Type="String">Function3</Data>
+            </Cell>
+          </Row>
+          <Row>
+            <Cell ss:StyleID="s62"/>
+            <Cell ss:StyleID="s62"/>
+            <Cell ss:StyleID="s62"/>
+            <Cell ss:StyleID="s62"/>
+          </Row>
+        </Table>
+        <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+          <PageSetup>
+            <Header x:Margin="0.3"/>
+            <Footer x:Margin="0.3"/>
+            <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+          </PageSetup>
+          <Selected/>
+          <Panes>
+            <Pane>
+              <Number>3</Number>
+              <ActiveRow>2</ActiveRow>
+              <ActiveCol>6</ActiveCol>
+            </Pane>
+          </Panes>
+          <ProtectObjects>False</ProtectObjects>
+          <ProtectScenarios>False</ProtectScenarios>
+        </WorksheetOptions>
+      </Worksheet>
+    </Workbook>
+  </xsl:template>
+</xsl:transform>

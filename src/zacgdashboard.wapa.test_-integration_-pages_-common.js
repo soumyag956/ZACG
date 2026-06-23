@@ -1,0 +1,3 @@
+sap.ui.define(["sap/ui/test/Opa5"],function(t){"use strict";function e(t,e){var i=jQuery.sap.getResourcePath("zMiscReport/zMiscReport/index",".html");t=t||"";e=e?"?"+e:"";if(t){t="#"+(t.indexOf("/")===0?t.substring(1):t)}else{t=""}return i+e+t}return t.e+
+xtend("zMiscReport.zMiscReport.test.integration.pages.Common",{iStartTheApp:function(t){t=t||{};this.iStartMyAppInAFrame(e(t.hash))},iLookAtTheScreen:function(){return this}})});                                                                             
+//# sourceMappingURL=Common.js.map                                                                                                                                                                                                                             

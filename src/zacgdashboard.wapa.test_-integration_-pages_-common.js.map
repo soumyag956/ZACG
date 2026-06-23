@@ -1,0 +1,3 @@
+{"version":3,"file":"Common.js","names":["sap","ui","define","Opa5","getFrameUrl","sHash","sUrlParameters","sUrl","jQuery","getResourcePath","indexOf","substring","extend","iStartTheApp","oOptions","this","iStartMyAppInAFrame","hash","iLookAtTheScreen"],+
+"sources":["Common-dbg.js"],"mappings":"AAAAA,IAAIC,GAAGC,OAAO,CACb,oBACE,SAAUC,GACZ,aAEA,SAASC,EAAYC,EAAOC,GAC3B,IAAIC,EAAOC,OAAOR,IAAIS,gBAAgB,gCAAiC,SACvEJ,EAAQA,GAAS,GACjBC,EAAiBA,EAAiB,IAAMA,EAAiB,GAEzD,GAAID,EAAO,CACVA,EAAQ,KAAOA,EAAMK,QAAQ,OAAS,EA+
+AIL,EAAMM,UAAU,GAAKN,EAChE,KAAO,CACNA,EAAQ,EACT,CAEA,OAAOE,EAAOD,EAAiBD,CAChC,CAEA,OAAOF,EAAKS,OAAO,wDAAyD,CAE3EC,aAAc,SAAUC,GACvBA,EAAWA,GAAY,CAAC,EAExBC,KAAKC,oBAAoBZ,EAAYU,EAASG,MAC/C,EAEAC,iBAAkB,WACjB,OAAOH,IACR,GAIF","ignoreList":[]}                
