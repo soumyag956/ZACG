@@ -1216,10 +1216,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_lock_user_report
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the "lock inactive users" worklist on screen 9008.
+*&
+*& When results already exist (GT_LOCK_OUTPUT) it just redisplays them.
+*& Otherwise it runs standard report RSUSR200 (captured via
+*& CL_SALV_BS_RUNTIME_INFO), keeps only dialog users ('A') and flags
+*& those inactive long enough (never logged on > 30 days, or last logon
+*& > 60 days ago) into GT_LOCK_DATA for the administrator to select and
+*& lock. Shows "No Data Found" when nothing qualifies.
 *&---------------------------------------------------------------------*
 FORM show_lock_user_report .
 
@@ -1400,10 +1404,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form lock_user
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Locks the users selected in the screen-9008 grid.
+*&
+*& For each selected row it calls BAPI_USER_LOCK and, on success, looks
+*& up the user's e-mail (BAPI_USER_GET_DETAIL) and notifies them via
+*& CL_BCS. Status icons / messages are collected in GT_LOCK_OUTPUT and
+*& shown in a pop-up ALV.
+*&
+*& KNOWN ISSUES: hard-coded BCS sender address; lt_return[ 1 ] read in
+*& the success branch without a guard; only COMMIT WORK is issued for
+*& the lock (BAPI_USER_LOCK).
 *&---------------------------------------------------------------------*
 FORM lock_user .
 
@@ -1545,9 +1555,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form select_file
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE
+*& Opens the front-end file-open dialog (Excel filter) and returns the
+*& chosen path.
+*&   <--  P_P_FILE  Selected file name (unchanged if nothing picked).
 *&---------------------------------------------------------------------*
 FORM select_file  CHANGING p_p_file TYPE localfile.
 
@@ -1571,10 +1581,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form screen_modification
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN OUTPUT helper that keeps the role-level (screen
+*& 0001) and user-level (screen 0002) "level" checkboxes in sync: ticking
+*& "all" (L0) selects L1-L4 and vice-versa. Also shows/hides the role
+*& assignment/removal block (group M04) on subscreen 9020 depending on
+*& the RB_ADR radio button.
 *&---------------------------------------------------------------------*
 FORM screen_modification .
 
