@@ -9920,10 +9920,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form direct_change
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Analysis (read-only): compares the authorization values (AGR_1251) of
+*& the derived/child roles in SO_AGR against their parent roles and lists
+*& every value that differs - either present in the child but not the
+*& parent, or in the parent but not the child - into GT_DERIVE_ROLE for
+*& display. Used to spot directly-maintained (out-of-sync) derived roles.
 *&---------------------------------------------------------------------*
 FORM direct_change.
 
@@ -10120,10 +10121,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form org_field_change
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Analysis (read-only): lists roles in SO_AGR1 whose organizational
+*& fields (defined in USORG) have been manually modified (AGR_1251
+*& MODIFIED = 'M') into GT_ORG_FIELD for display.
 *&---------------------------------------------------------------------*
 FORM org_field_change .
 
@@ -14285,10 +14285,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_tlog_reject
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Writes rejection rows for firefighter transaction-log entries: for
+*& each reviewed entry in I_OUTTAB_7006 it stores a 'R' (rejected) record
+*& in ZACG_FFID_TLOG with the reviewer, timestamp and rejection reason.
+*& Side effect: updates the FFID transaction log.
 *&---------------------------------------------------------------------*
 FORM update_tlog_reject .
   DATA: lt_tlog TYPE STANDARD TABLE OF zacg_ffid_tlog.
@@ -14312,10 +14312,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7006
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Saves the current FFID transaction-log review row (screen 7006) back
+*& to I_OUTTAB_7006.
 *&---------------------------------------------------------------------*
 FORM validate_7006 .
   MODIFY i_outtab_7006 FROM wa_outtab_7006 INDEX table_7006-current_line.
