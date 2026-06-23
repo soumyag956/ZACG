@@ -4,10 +4,9 @@
 *&---------------------------------------------------------------------*
 *& Form fetch_log_data
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Batch helper: reads the Security Audit Log (RSAU_*) for the active
+*& firefighter sessions and stores the transactions they executed in the
+*& FFID transaction log ZACG_FFID_TLOG for later review.
 *&---------------------------------------------------------------------*
 FORM fetch_log_data .
   DATA : lv_max_date   TYPE begda,

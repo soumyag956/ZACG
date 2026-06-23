@@ -76,10 +76,9 @@ START-OF-SELECTION.
 *&---------------------------------------------------------------------*
 *& Form validate_file
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the configuration upload file selected on the selection
+*& screen (correct type and layout for the chosen config object) before
+*& FORM update applies it. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM validate_file .
 
@@ -344,10 +343,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Applies the uploaded configuration to the database. Depending on the
+*& object selected on the screen (radio buttons) it loads the parsed
+*& Excel rows into the matching config table: risk master (ZACG_RISK_MSTR),
+*& function master (ZACG_FUNCT), risk library (ZACG_RISK_LIB), risk
+*& combinations (ZACG_RISK_COMB), permission values (ZACG_OBJ_FVAL), role
+*& owners (ZACG_ROLE_OWNERS), mitigation owners (ZACG_MITG_OWNERS), line
+*& managers (ZACG_MANAGER) or the rule set (ZACG_FUE_RUL_SET).
+*& Side effect: updates the ZACG configuration tables.
 *&---------------------------------------------------------------------*
 FORM update.
 
@@ -619,10 +622,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Downloads the Excel upload template for the configuration object
+*& currently selected on the screen (runs the matching XSLT
+*& transformation and saves the file to a chosen folder).
 *&---------------------------------------------------------------------*
 FORM download_template .
 

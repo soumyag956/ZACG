@@ -4,11 +4,11 @@
 *&---------------------------------------------------------------------*
 *& Form separated_to_intern_convert
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> EXCEL_TAB
-*&      --> INTERN
-*&      --> LD_SEPARATOR
+*& Converts a table of separator-delimited text lines into the internal
+*& row/column "intern" table used by the ZACG ALSMEX Excel helpers.
+*&   -->  I_TAB        Source lines.
+*&   <--  I_INTERN     Resulting row/col/value table.
+*&   -->  I_SEPARATOR  Field separator character.
 *&---------------------------------------------------------------------*
 FORM separated_to_intern_convert TABLES i_tab       TYPE ty_t_sender
                                         i_intern    TYPE ty_t_itab

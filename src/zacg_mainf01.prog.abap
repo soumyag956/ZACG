@@ -2446,10 +2446,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form docking_9101
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Obsolete/leftover header block - no FORM implementation follows.
 *&---------------------------------------------------------------------*
 *&---------------------------------------------------------------------*
 *& Form user_command_8001
@@ -4383,12 +4380,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_sum_excel
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LV_FILENAME
-*&      --> LV_PATH
-*&      --> LIT_DATA
-*&      --> LRA_ROLE
+*& Download helper: exports the role-risk SUMMARY result to an Excel
+*& file at the given path (via the summary XSLT transformation).
+*&   -->  I_PATH  Target file path (further params: data / role range).
 *&---------------------------------------------------------------------*
 FORM download_sum_excel  USING    VALUE(i_path)
                                   VALUE(i_data) TYPE zacg_t_risk_summary
@@ -4454,8 +4448,6 @@ FORM download_sum_excel  USING    VALUE(i_path)
 ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_role_detail_excel
-*&---------------------------------------------------------------------*
-*& text
 *&---------------------------------------------------------------------*
 *& Download helper: exports the role-risk DETAIL result to an Excel file
 *& at the given path (via the role-detail XSLT transformation).
@@ -9601,8 +9593,6 @@ FORM update_message  USING  io_msg_buffer TYPE REF TO if_spcg_msg_buffer
 ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message1
-*&---------------------------------------------------------------------*
-*& text
 *&---------------------------------------------------------------------*
 *& Variant of update_message that records the per-role / per-object
 *& result of a mass auth-value maintenance step into GT_AUTH_VAL,
