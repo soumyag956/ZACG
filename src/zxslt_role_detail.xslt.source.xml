@@ -1,0 +1,153 @@
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:sap="http://www.sap.com/sapxsl" version="1.0">
+  <xsl:strip-space elements="*"/>
+  <xsl:template match="/">
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html=
+"http://www.w3.org/TR/REC-html40">
+      <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+        <Author>Kallol Banerjee</Author>
+        <LastAuthor>Kallol Banerjee</LastAuthor>
+        <Created>2015-06-05T18:17:20Z</Created>
+        <LastSaved>2023-08-27T13:24:37Z</LastSaved>
+        <Version>16.00</Version>
+      </DocumentProperties>
+      <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+        <WindowHeight>11620</WindowHeight>
+        <WindowWidth>19420</WindowWidth>
+        <WindowTopX>32767</WindowTopX>
+        <WindowTopY>32767</WindowTopY>
+        <ProtectStructure>False</ProtectStructure>
+        <ProtectWindows>False</ProtectWindows>
+      </ExcelWorkbook>
+      <Styles>
+        <Style ss:ID="Default" ss:Name="Normal">
+          <Alignment ss:Vertical="Bottom"/>
+          <Borders/>
+          <Font ss:Color="#000000" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior/>
+          <NumberFormat/>
+          <Protection/>
+        </Style>
+        <Style ss:ID="s17">
+          <Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" x:Family="Swiss"/>
+          <Interior ss:Color="#7030A0" ss:Pattern="Solid"/>
+        </Style>
+        <Style ss:ID="s18">
+          <Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Arial" ss:Size="11" x:Family="Swiss"/>
+          <Interior ss:Color="#7030A0" ss:Pattern="Solid"/>
+        </Style>
+        <Style ss:ID="s67">
+          <Font ss:Color="#000000" ss:FontName="Arial" ss:Size="11" x:Family="Swiss"/>
+        </Style>
+      </Styles>
+      <Worksheet ss:Name="Sheet1">
+        <Table ss:DefaultColumnWidth="47.5" ss:DefaultRowHeight="14" ss:ExpandedColumnCount="11" ss:ExpandedRowCount="2" ss:StyleID="s67" x:FullColumns="1" x:FullRows="1">
+          <Column ss:StyleID="s67" ss:Width="25.5"/>
+          <Column ss:StyleID="s67" ss:Width="27"/>
+          <Column ss:StyleID="s67" ss:Width="88.5"/>
+          <Column ss:StyleID="s67" ss:Width="49"/>
+          <Column ss:StyleID="s67" ss:Width="111"/>
+          <Column ss:StyleID="s67" ss:Width="65.5"/>
+          <Column ss:StyleID="s67" ss:Width="35.5"/>
+          <Column ss:StyleID="s67" ss:Width="44.5"/>
+          <Column ss:StyleID="s67" ss:Width="28.5"/>
+          <Column ss:StyleID="s67" ss:Width="27"/>
+          <Column ss:StyleID="s67" ss:Width="28"/>
+          <Row>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Role</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Risk</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Risk Description</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Function</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Function Description</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Transaction</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Object</Data>
+            </Cell>
+            <Cell ss:StyleID="s17">
+              <Data ss:Type="String">Instance</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Field</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">Low</Data>
+            </Cell>
+            <Cell ss:StyleID="s18">
+              <Data ss:Type="String">High</Data>
+            </Cell>
+          </Row>
+          <xsl:for-each select="//ROOT/*">
+            <Row>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="AGR_NAME"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="RISK"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="RISKD"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="FUNC"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="FUNCD"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="TCODE"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="OBJECT"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="AUTH"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="FIELD"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="LOW"/></Data>
+              </Cell>
+              <Cell>
+                <Data ss:Type="String"><xsl:value-of select="HIGH"/></Data>
+              </Cell>
+            </Row>
+          </xsl:for-each>
+        </Table>
+        <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+          <PageSetup>
+            <Header x:Margin="0.3"/>
+            <Footer x:Margin="0.3"/>
+            <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+          </PageSetup>
+          <Print>
+            <ValidPrinterInfo/>
+            <HorizontalResolution>600</HorizontalResolution>
+            <VerticalResolution>600</VerticalResolution>
+          </Print>
+          <Selected/>
+          <Panes>
+            <Pane>
+              <Number>3</Number>
+              <ActiveRow>6</ActiveRow>
+              <ActiveCol>3</ActiveCol>
+            </Pane>
+          </Panes>
+          <ProtectObjects>False</ProtectObjects>
+          <ProtectScenarios>False</ProtectScenarios>
+        </WorksheetOptions>
+      </Worksheet>
+    </Workbook>
+  </xsl:template>
+</xsl:transform>

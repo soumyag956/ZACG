@@ -1,0 +1,147 @@
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:sap="http://www.sap.com/sapxsl" version="1.0">
+
+  <xsl:strip-space elements="*"/>
+
+  <xsl:template match="/">
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html=
+"http://www.w3.org/TR/REC-html40">
+      <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+        <Author>Sudipta Sikder</Author>
+        <LastAuthor>Sudipta Sikder</LastAuthor>
+        <Created>2023-05-21T18:50:11Z</Created>
+        <Version>16.00</Version>
+      </DocumentProperties>
+      <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+        <WindowHeight>9120</WindowHeight>
+        <WindowWidth>23040</WindowWidth>
+        <WindowTopX>32767</WindowTopX>
+        <WindowTopY>32767</WindowTopY>
+        <ProtectStructure>False</ProtectStructure>
+        <ProtectWindows>False</ProtectWindows>
+      </ExcelWorkbook>
+      <Styles>
+        <Style ss:ID="Default" ss:Name="Normal">
+          <Alignment ss:Vertical="Bottom"/>
+          <Borders/>
+          <Font ss:Color="#000000" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior/>
+          <NumberFormat/>
+          <Protection/>
+        </Style>
+        <Style ss:ID="s70">
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+        </Style>
+        <Style ss:ID="s74">
+          <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior ss:Color="#002060" ss:Pattern="Solid"/>
+        </Style>
+        <Style ss:ID="s78">
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <Interior/>
+        </Style>
+        <Style ss:ID="s81">
+          <Font ss:Bold="1" ss:Color="#FFFFFF" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior ss:Color="#002060" ss:Pattern="Solid"/>
+        </Style>
+      </Styles>
+      <Worksheet ss:Name="Sheet1">
+        <Table ss:DefaultRowHeight="14.4" ss:ExpandedColumnCount="4" ss:ExpandedRowCount="4" x:FullColumns="1" x:FullRows="1">
+          <Column ss:Index="2" ss:Width="56.4"/>
+          <Column ss:Width="407.4"/>
+          <Column ss:Width="270.60000000000002"/>
+          <Row>
+            <Cell ss:StyleID="s81">
+              <Data ss:Type="String">SL No.</Data>
+            </Cell>
+            <Cell ss:StyleID="s74">
+              <Data ss:Type="String">USER ID</Data>
+            </Cell>
+            <Cell ss:StyleID="s74">
+              <Data ss:Type="String">PASSWORD (*Provide Password for Users if System Generated Password Not Required)</Data>
+            </Cell>
+          </Row>
+          <Row>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="Number">1</Data>
+            </Cell>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="String">ZSECTEST1</Data>
+            </Cell>
+            <Cell ss:StyleID="s78">
+              <Data ss:Type="String">Welcome@1</Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">*Here password will be reset to Welcome@1</Data>
+            </Cell>
+          </Row>
+          <Row>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="Number">2</Data>
+            </Cell>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="String">ZSECTEST2</Data>
+            </Cell>
+            <Cell ss:StyleID="s70"/>
+            <Cell>
+              <Data ss:Type="String">*Here password will be reset to System Generated Password</Data>
+            </Cell>
+          </Row>
+          <Row>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="Number">3</Data>
+            </Cell>
+            <Cell ss:StyleID="s70">
+              <Data ss:Type="String">ZSECTEST3</Data>
+            </Cell>
+            <Cell ss:StyleID="s78">
+              <Data ss:Type="String">New@1234</Data>
+            </Cell>
+            <Cell>
+              <Data ss:Type="String">*Here password will be reset to New@1234</Data>
+            </Cell>
+          </Row>
+        </Table>
+        <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+          <PageSetup>
+            <Header x:Margin="0.3"/>
+            <Footer x:Margin="0.3"/>
+            <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+          </PageSetup>
+          <Print>
+            <ValidPrinterInfo/>
+            <PaperSizeIndex>9</PaperSizeIndex>
+            <HorizontalResolution>600</HorizontalResolution>
+            <VerticalResolution>0</VerticalResolution>
+          </Print>
+          <Selected/>
+          <Panes>
+            <Pane>
+              <Number>3</Number>
+              <ActiveRow>6</ActiveRow>
+              <ActiveCol>3</ActiveCol>
+            </Pane>
+          </Panes>
+          <ProtectObjects>False</ProtectObjects>
+          <ProtectScenarios>False</ProtectScenarios>
+        </WorksheetOptions>
+      </Worksheet>
+    </Workbook>
+  </xsl:template>
+</xsl:transform>
