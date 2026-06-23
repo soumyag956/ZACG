@@ -4,10 +4,10 @@
 *&---------------------------------------------------------------------*
 *& Form user_critical_authorization
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Prepares the USER-level dashboard data: reads the users and their
+*& roles, runs the SoD / critical-authorization analysis and stores the
+*& summarized results in table ZACG_DASHBOARD (keyed by the current
+*& background job) for the Security Dashboard Fiori app.
 *&---------------------------------------------------------------------*
 FORM user_data_prepare.
 
@@ -95,10 +95,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form role_critical_authorization
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Prepares the ROLE-level dashboard data: runs the SoD / critical-
+*& authorization analysis per role and stores the summarized results in
+*& table ZACG_DASHBOARD (keyed by the current background job) for the
+*& Security Dashboard Fiori app.
 *&---------------------------------------------------------------------*
 FORM role_data_prepare.
 

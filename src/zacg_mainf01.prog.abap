@@ -68,6 +68,23 @@ FORM fill_node CHANGING li_node_table TYPE ty_node_table_type.
 
 ENDFORM.
 
+*&---------------------------------------------------------------------*
+*& Form authority_check
+*&---------------------------------------------------------------------*
+*& Checks whether the current user is authorized for the tree node
+*& identified by KEY. The authorization object name is derived by
+*& prefixing the node key with 'ZACG_' (e.g. key 'CROL' -> 'ZACG_CROL')
+*& and the standard activity 16 (display/execute) is checked.
+*&
+*&   -->  KEY    Tree node key (max 5 chars so 'ZACG_' + KEY fits the
+*&               10-char XUOBJECT name).
+*&   <--  VALID  ABAP_TRUE when the user passes the check, otherwise
+*&               left unchanged.
+*&
+*& NOTE: every guarded node's object must expose field ACTVT, otherwise
+*& AUTHORITY-CHECK returns sy-subrc = 2 (object/field unknown) and the
+*& node is treated as not authorized.
+*&---------------------------------------------------------------------*
 FORM authority_check USING key TYPE tv_nodekey CHANGING valid TYPE flag.
 
   DATA: lv_object TYPE xuobject.
@@ -84,10 +101,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_1000
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the main screen 1000. Leaves the screen on the
+*& BACK / EXIT / CANCEL function codes.
 *&---------------------------------------------------------------------*
 FORM user_command_1000 .
 
@@ -108,10 +123,20 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_user
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-creates SAP users from the uploaded Excel template.
+*&
+*& Flow:
+*&   1. Reads the spreadsheet (ALSMEX) into an internal table.
+*&   2. For each user id (AT END OF userid) builds the logon, address,
+*&      default, SNC and licence data and calls:
+*&        - BAPI_USER_CREATE1          (create the user + password)
+*&        - BAPI_USER_ACTGROUPS_ASSIGN (assign roles, if supplied)
+*&        - BAPI_USER_PROFILES_ASSIGN  (assign profiles, if supplied)
+*&        - BAPI_TRANSACTION_COMMIT    (persist the changes)
+*&   3. Collects per-user status messages in GT_USER_OUTPUT and shows
+*&      them in an ALV grid.
+*&
+*& Side effects: creates users and commits to the database.
 *&---------------------------------------------------------------------*
 FORM create_user .
 
@@ -379,9 +404,15 @@ FORM create_user .
 
       ls_output-userid = lv_userid.
       ls_output-gen_pw = ls_gen_pw-bapipwd.
-      ls_output-user_msg = lt_return_user[ 1 ]-message.
-      IF lt_return_user[ 1 ]-type = 'E'.
-        CLEAR ls_output-gen_pw.
+*     Read the first BAPI message defensively. Direct index access
+*     ( lt_return_user[ 1 ] ) raises CX_SY_ITAB_LINE_NOT_FOUND when the
+*     BAPI returns no messages, so READ TABLE with an sy-subrc check is used.
+      READ TABLE lt_return_user INTO DATA(ls_ret_user) INDEX 1.
+      IF sy-subrc = 0.
+        ls_output-user_msg = ls_ret_user-message.
+        IF ls_ret_user-type = 'E'.
+          CLEAR ls_output-gen_pw.
+        ENDIF.
       ENDIF.
 
       IF lt_role IS NOT INITIAL.
@@ -392,7 +423,10 @@ FORM create_user .
             activitygroups = lt_role
             return         = lt_return_role.
 
-        ls_output-role_msg = lt_return_role[ 1 ]-message.
+        READ TABLE lt_return_role INTO DATA(ls_ret_role) INDEX 1.
+        IF sy-subrc = 0.
+          ls_output-role_msg = ls_ret_role-message.
+        ENDIF.
       ELSE.
         ls_output-role_msg = 'No Role has been provided for this user'.
       ENDIF.
@@ -405,10 +439,21 @@ FORM create_user .
             profiles = lt_profile
             return   = lt_return_prof.
 
-        ls_output-prof_msg = lt_return_prof[ 1 ]-message.
+        READ TABLE lt_return_prof INTO DATA(ls_ret_prof) INDEX 1.
+        IF sy-subrc = 0.
+          ls_output-prof_msg = ls_ret_prof-message.
+        ENDIF.
       ELSE.
         ls_output-prof_msg = 'No Profile has been provided for this user'.
       ENDIF.
+
+*     BAPI_USER_* functions register their work on the update task but do
+*     not commit. Without an explicit commit the user / role / profile
+*     assignment is never persisted even though the BAPI returns success.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
       APPEND ls_output TO gt_user_output.
       CLEAR: lv_userid, ls_logondata, ls_password, ls_default,
              ls_address, ls_snc, ls_uclass, ls_gen_pw, lt_param,
@@ -486,10 +531,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form f_dld_user_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Lets the user pick a folder and downloads the "Create User" Excel
+*& template there. The empty template is produced by XSLT transformation
+*& ZSEC_XSLT_USER_TEMPLATE and written with GUI_DOWNLOAD.
+*& Front-end only (uses CL_GUI_FRONTEND_SERVICES / GUI_DOWNLOAD).
 *&---------------------------------------------------------------------*
 FORM f_dld_user_template .
 
@@ -561,10 +606,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_file2_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the password-reset upload file (P_FILE2) at AT SELECTION
+*& SCREEN time. Confirms the file is supplied, has an .XLS extension and
+*& that the first two header cells read 'User ID' and 'Password'. On any
+*& failure it clears sy-ucomm / g_ucomm and raises an error message so
+*& the action is not executed.
 *&---------------------------------------------------------------------*
 FORM p_pwfile_validate .
   TYPES: BEGIN OF lty_std_role,
@@ -633,10 +679,19 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_init_password
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass password set/reset from the uploaded Excel file (P_FILE2).
+*&
+*& For each "User ID / Password" row:
+*&   - blank password  -> BAPI_USER_CHANGE with GENERATE_PWD (system
+*&     generates a password),
+*&   - filled password -> BAPI_USER_CHANGE sets that password.
+*& On success the new password is e-mailed to the user's SMTP address
+*& (looked up via USR21 / ADR6) using CL_BCS. Per-user status is shown
+*& in ALV grid on screen 9007 (GT_PWD_OUTPUT).
+*&
+*& KNOWN ISSUES (see code review): the BCS sender address is hard-coded,
+*& the password is sent in clear text, and lt_return[ 1 ] is read without
+*& a guard.
 *&---------------------------------------------------------------------*
 FORM set_reset_password_mass .
   TYPES: BEGIN OF lty_std_role,
@@ -875,6 +930,16 @@ FORM set_reset_password_mass .
   ENDIF.
 
 ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form set_reset_password_manual
+*&---------------------------------------------------------------------*
+*& Manual password set/reset for the users entered in select-option
+*& SO_UPW. Behaves like SET_RESET_PASSWORD_MASS but takes the users and
+*& the single password P_PWD from the selection screen instead of a
+*& file: blank P_PWD generates a password, otherwise P_PWD is set. The
+*& new password is e-mailed to each user and results are shown in the
+*& screen 9007 ALV grid. Same known issues as the mass variant.
+*&---------------------------------------------------------------------*
 FORM set_reset_password_manual .
   TYPES: BEGIN OF lty_std_role,
            uname TYPE xubname,
@@ -1078,10 +1143,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form f_pwfile_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Lets the user pick a folder and downloads the "Password Reset" Excel
+*& template (XSLT ZSEC_XSLT_PWD_TEMPLATE) via GUI_DOWNLOAD.
+*& Front-end only.
 *&---------------------------------------------------------------------*
 FORM f_pwfile_template .
   DATA : lv_path TYPE string,
@@ -1152,10 +1216,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_lock_user_report
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the "lock inactive users" worklist on screen 9008.
+*&
+*& When results already exist (GT_LOCK_OUTPUT) it just redisplays them.
+*& Otherwise it runs standard report RSUSR200 (captured via
+*& CL_SALV_BS_RUNTIME_INFO), keeps only dialog users ('A') and flags
+*& those inactive long enough (never logged on > 30 days, or last logon
+*& > 60 days ago) into GT_LOCK_DATA for the administrator to select and
+*& lock. Shows "No Data Found" when nothing qualifies.
 *&---------------------------------------------------------------------*
 FORM show_lock_user_report .
 
@@ -1336,10 +1404,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form lock_user
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Locks the users selected in the screen-9008 grid.
+*&
+*& For each selected row it calls BAPI_USER_LOCK and, on success, looks
+*& up the user's e-mail (BAPI_USER_GET_DETAIL) and notifies them via
+*& CL_BCS. Status icons / messages are collected in GT_LOCK_OUTPUT and
+*& shown in a pop-up ALV.
+*&
+*& KNOWN ISSUES: hard-coded BCS sender address; lt_return[ 1 ] read in
+*& the success branch without a guard; only COMMIT WORK is issued for
+*& the lock (BAPI_USER_LOCK).
 *&---------------------------------------------------------------------*
 FORM lock_user .
 
@@ -1481,9 +1555,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form select_file
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE
+*& Opens the front-end file-open dialog (Excel filter) and returns the
+*& chosen path.
+*&   <--  P_P_FILE  Selected file name (unchanged if nothing picked).
 *&---------------------------------------------------------------------*
 FORM select_file  CHANGING p_p_file TYPE localfile.
 
@@ -1507,10 +1581,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form screen_modification
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN OUTPUT helper that keeps the role-level (screen
+*& 0001) and user-level (screen 0002) "level" checkboxes in sync: ticking
+*& "all" (L0) selects L1-L4 and vice-versa. Also shows/hides the role
+*& assignment/removal block (group M04) on subscreen 9020 depending on
+*& the RB_ADR radio button.
 *&---------------------------------------------------------------------*
 FORM screen_modification .
 
@@ -1589,10 +1664,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Main driver for the Role Risk Analysis screen (9001).
+*&
+*& Reads the selection-screen settings (role type S/C, risk levels
+*& L0-L4, modules, summary vs detail, simulation flag/file) and calls
+*& the risk-analysis function module ZACG_RISK_ROLES. Depending on the
+*& result it shows the summary (screen 8001), detail (8002) or offers an
+*& Excel download when the selection is too large to render online.
+*& Handles the simulation upload path as well.
 *&---------------------------------------------------------------------*
 FORM user_command_9001.
 
@@ -2077,10 +2156,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_role_sumary_columns
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV helper: builds the field catalogue for the role-risk SUMMARY grid.
 *&---------------------------------------------------------------------*
 FORM set_role_summary_columns USING comp CHANGING li_fact TYPE lvc_t_fcat.
 
@@ -2215,9 +2291,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_role_detail_columns
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- LI_FACT
+*& ALV helper: builds the field catalogue for the role-risk DETAIL grid.
 *&---------------------------------------------------------------------*
 FORM set_role_detail_columns  USING comp CHANGING li_fact TYPE lvc_t_fcat.
 
@@ -2372,18 +2446,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form docking_9101
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Obsolete/leftover header block - no FORM implementation follows.
 *&---------------------------------------------------------------------*
 *&---------------------------------------------------------------------*
 *& Form user_command_8001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the role-risk summary screen 8001 (BACK/EXIT/CANCEL,
+*& download and navigation function codes).
 *&---------------------------------------------------------------------*
 FORM user_command_8001 .
 
@@ -2398,10 +2467,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8001 (role-risk summary ALV).
 *&---------------------------------------------------------------------*
 FORM show_8001.
 
@@ -2535,10 +2601,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8003
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8003 (role-risk ALV variant).
 *&---------------------------------------------------------------------*
 FORM show_8003.
 
@@ -2799,10 +2862,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form doc_display
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the long-text / documentation popup for the
+*& selected risk on screen 8001.
 *&---------------------------------------------------------------------*
 FORM doc_display_8001.
 
@@ -2939,10 +3000,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_top_of_page_8001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV top-of-page handler for screen 8001: writes the report header
+*& (logo / selection info) above the grid.
 *&---------------------------------------------------------------------*
 FORM handle_top_of_page_8001 .
 
@@ -3107,10 +3166,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_top_of_page_8002
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV top-of-page handler for screen 8002 (writes the report header).
 *&---------------------------------------------------------------------*
 FORM handle_top_of_page_8002 .
 
@@ -3275,10 +3331,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_top_of_page_8003
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV top-of-page handler for screen 8003 (writes the report header).
 *&---------------------------------------------------------------------*
 FORM handle_top_of_page_8003 .
 
@@ -3451,10 +3504,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_top_of_page_8004
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV top-of-page handler for screen 8004 (writes the report header).
 *&---------------------------------------------------------------------*
 FORM handle_top_of_page_8004 .
 
@@ -3932,10 +3982,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_toolbar
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> E_OBJECT
-*&      --> E_INTERACTIVE
+*& ALV event handler: adds the custom buttons (e.g. download) to the
+*& grid toolbar.
+*&   -->  E_OBJECT       Toolbar event object.
+*&   -->  E_INTERACTIVE  Interactive-call flag.
 *&---------------------------------------------------------------------*
 FORM handle_toolbar  USING    e_object TYPE REF TO cl_alv_event_toolbar_set
                               e_interactive.
@@ -3993,10 +4043,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_9001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Download helper: exports the screen-8001 role-risk summary to Excel.
 *&---------------------------------------------------------------------*
 FORM download_8001.
 
@@ -4333,12 +4380,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_sum_excel
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LV_FILENAME
-*&      --> LV_PATH
-*&      --> LIT_DATA
-*&      --> LRA_ROLE
+*& Download helper: exports the role-risk SUMMARY result to an Excel
+*& file at the given path (via the summary XSLT transformation).
+*&   -->  I_PATH  Target file path (further params: data / role range).
 *&---------------------------------------------------------------------*
 FORM download_sum_excel  USING    VALUE(i_path)
                                   VALUE(i_data) TYPE zacg_t_risk_summary
@@ -4405,11 +4449,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_role_detail_excel
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LV_EXC_PATH
-*&      --> I_DETAIL_9001
-*&      --> LRA_ROLE
+*& Download helper: exports the role-risk DETAIL result to an Excel file
+*& at the given path (via the role-detail XSLT transformation).
+*&   -->  I_PATH  Target file path.
 *&---------------------------------------------------------------------*
 FORM download_role_detail_excel  USING    VALUE(i_path)
                                           VALUE(i_data) TYPE zacg_t_risk_detail
@@ -4602,10 +4644,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_init_password
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Set a productive password for the users in SO_UPW1 (manual variant).
+*&
+*& NOTE: the body is currently fully commented out, so this form is a
+*& no-op. The intended logic (kept as comments) generated a temporary
+*& password with BAPI_USER_CHANGE and then set the target productive
+*& password P_PWD1 via SUSR_USER_CHANGE_PASSWORD_RFC, committing on
+*& success and rolling back on error.
 *&---------------------------------------------------------------------*
 FORM set_prod_password_manual.
 
@@ -4707,10 +4752,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_initpw_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Set-Productive-Password
+*& upload: requires an .XLS file whose header row reads
+*& 'User ID' / 'Password'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_initpw_validate .
 
@@ -4771,9 +4815,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE3
+*& Opens the front-end file-open dialog and returns the selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath  CHANGING c_file.
 
@@ -4799,9 +4842,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE42
+*& Opens the front-end file-open dialog (xlsx/txt filter) and returns the
+*& selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath_xlsx_txt_41  CHANGING c_file.
 
@@ -4843,9 +4886,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE42
+*& Opens the front-end file-open dialog (xlsx/txt filter) and returns the
+*& selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath_xlsx_txt_42  CHANGING c_file.
 
@@ -4887,10 +4930,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_cdrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Change-Role-Description upload
+*& (P_FILE4): requires an .XLS file whose header row reads
+*& 'Role Name' / 'Role Description'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_cdrole_validate .
 
@@ -4952,10 +4994,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form change_description_of_roles
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-changes role (PFCG) descriptions from the uploaded Excel file
+*& (P_FILE4, columns Role / Description).
+*&
+*& Each row is applied with PRGN_RFC_CHANGE_TEXTS for the logon language;
+*& per-role status (type / message) is collected in GT_ROLE_DES and shown
+*& in the screen-9011 ALV grid.
+*& Side effect: updates role texts in the database.
 *&---------------------------------------------------------------------*
 FORM change_description_of_roles .
 
@@ -5107,9 +5152,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_FILE4
+*& Generic Excel-template downloader used by the role-maintenance
+*& functions. Runs the given XSLT transformation to produce the empty
+*& template, converts it to binary and saves it to a folder chosen by
+*& the user.
+*&   -->  I_FILENAME    File name to save (e.g. '\Role_Desc.xls').
+*&   -->  I_TRANS_NAME  Name of the XSLT transformation to call.
 *&---------------------------------------------------------------------*
 FORM download_template USING i_filename    TYPE string
                              i_trans_name  TYPE cxsltdesc.
@@ -5192,10 +5240,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_usupd_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Update-User-Details upload
+*& (P_FILE3): requires an .XLS file whose header row reads 'User ID',
+*& 'First Name', 'Last Name', 'Function', 'Department', 'Email ID'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_usupd_validate .
 
@@ -5276,10 +5324,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_drrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Derive-Role upload (P_FILE5):
+*& requires an .XLS file whose header row reads
+*& 'Parent Role' / 'Child Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_drrole_validate .
 
@@ -5340,10 +5387,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form derive_role_create
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-creates derived (child) roles from the uploaded Excel file
+*& (P_FILE5, columns Parent Role / Child Role).
+*&
+*& Each row calls PRGN_RFC_CREATE_ACTIVITY_GROUP to derive the child
+*& role from its parent. Per-row status is collected in GT_DR_ROLE and
+*& shown in the screen-9012 ALV grid.
+*& Side effect: creates roles in the database.
 *&---------------------------------------------------------------------*
 FORM derive_role_create .
 
@@ -5497,10 +5547,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_dirole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Delete-Inheritance upload
+*& (P_FILE6): requires an .XLS file whose header row reads
+*& 'Parent Role' / 'Child Role'. Clears sy-ucomm / g_ucomm and raises an
+*& error otherwise so the action is not executed.
 *&---------------------------------------------------------------------*
 FORM p_dirole_validate .
 
@@ -5561,10 +5611,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form delete_inheritance
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Removes the parent/child inheritance from derived roles listed in the
+*& uploaded Excel file (P_FILE6, columns Parent Role / Child Role).
+*&
+*& Each child role is detached with PRGN_RFC_DELETE_DERIVATION. Per-row
+*& status is collected in GT_DR_ROLE and shown in the screen-9013 ALV.
+*& Side effect: changes role derivation in the database.
 *&---------------------------------------------------------------------*
 FORM delete_inheritance .
 
@@ -5702,10 +5754,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_asrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Add-Single-to-Composite upload
+*& (P_FILE7): requires an .XLS file whose header row reads
+*& 'Composite Role' / 'Single Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_asrole_validate .
 
@@ -5766,10 +5817,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form add_single_role_to_composite
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Adds single roles to composite roles from the uploaded Excel file
+*& (P_FILE7, columns Composite Role / Single Role).
+*&
+*& Each row calls PRGN_RFC_ADD_AGRS_TO_COLL_AGR. Per-row status is
+*& collected in GT_COMP_ROLE and shown in the screen-9014 ALV grid.
+*& Side effect: changes composite-role membership in the database.
 *&---------------------------------------------------------------------*
 FORM add_single_role_to_composite .
 
@@ -5946,10 +5999,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_rsrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Remove-Single-from-Composite
+*& upload (P_FILE8): requires an .XLS file whose header row reads
+*& 'Composite Role' / 'Single Role'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_rsrole_validate .
 
@@ -6010,10 +6062,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form remove_single_from_composite
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Removes single roles from composite roles using the uploaded Excel
+*& file (P_FILE8, columns Composite Role / Single Role).
+*&
+*& Each row calls PRGN_RFC_DEL_AGRS_IN_COLL_AGR. Per-row status is
+*& collected in GT_COMP_ROLE and shown in the screen-9015 ALV grid.
+*& Side effect: changes composite-role membership in the database.
 *&---------------------------------------------------------------------*
 FORM remove_single_from_composite .
 
@@ -6190,10 +6244,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_rmrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Delete-Roles upload (P_FILE9):
+*& requires an .XLS file whose header row reads 'Role Name'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_rmrole_validate .
 
@@ -6249,10 +6302,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form delete_roles
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-deletes roles listed in the uploaded Excel file (P_FILE9,
+*& column Role Name).
+*&
+*& Each row calls PRGN_ACTIVITY_GROUP_DELETE. Per-row status is collected
+*& in GT_DEL_ROLE and shown in the screen-9016 ALV grid.
+*& Side effect: deletes roles from the database.
 *&---------------------------------------------------------------------*
 FORM delete_roles .
 
@@ -6399,10 +6454,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_pmrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Push-Master-Role upload
+*& (P_FILE10): requires an .XLS file whose header row reads 'Role Name'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_pmrole_validate .
 
@@ -6458,10 +6512,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form push_master_role
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Pushes (transfers) authorization data from master roles to their
+*& derived roles for the roles listed in the uploaded Excel file
+*& (P_FILE10, column Role Name).
+*&
+*& Each row calls SUPRN_TRANSFER_AUTH_DATA. Per-row status is shown in
+*& the result ALV grid. Side effect: regenerates derived-role auth data.
 *&---------------------------------------------------------------------*
 FORM push_master_role .
 
@@ -6588,10 +6644,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_ccrole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Create-Composite-Role upload
+*& (P_FILE11): requires an .XLS file whose header row reads
+*& 'Role Name' / 'Role Text'. Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_ccrole_validate .
 
@@ -6652,10 +6707,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_composite_role
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Creates composite roles from the uploaded Excel file (P_FILE11,
+*& columns Role Name / Role Text).
+*&
+*& Implemented via a batch-input (BDC) session against transaction PFCG
+*& (built with bdc_dynpro / bdc_field and run with CALL TRANSACTION).
+*& Per-row status is collected in GT_CCOMP_ROLE and shown in the result
+*& ALV grid. Side effect: creates composite roles in the database.
 *&---------------------------------------------------------------------*
 FORM create_composite_role .
 
@@ -6804,10 +6862,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form bdc_dynpro
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
-*&      --> P_
+*& BDC helper: appends a screen (dynpro start) entry to the batch-input
+*& table GT_BDCTAB.
+*&   -->  IV_PROGRAM  Program name of the screen.
+*&   -->  IV_DYNPRO   Screen (dynpro) number.
 *&---------------------------------------------------------------------*
 FORM bdc_dynpro USING iv_program
                       iv_dynpro.
@@ -6824,10 +6882,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form bdc_field
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
-*&      --> P_
+*& BDC helper: appends a field value entry to the batch-input table
+*& GT_BDCTAB.
+*&   -->  IV_FNAM  Screen field name.
+*&   -->  IV_FVAL  Field value.
 *&---------------------------------------------------------------------*
 FORM bdc_field  USING iv_fnam
                       iv_fval.
@@ -6844,10 +6902,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_user_details
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-updates user master address data (first/last name, function,
+*& department, e-mail) from the uploaded Excel file (P_FILE3).
+*&
+*& Each row calls BAPI_USER_CHANGE with the address structure and its
+*& change-flags. Per-row status is collected in GT_USER_DETAILS and
+*& shown in the screen-9010 ALV grid.
+*& Side effect: changes user master data in the database.
 *&---------------------------------------------------------------------*
 FORM update_user_details .
 
@@ -7045,10 +7106,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form man_role_ad
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Manual role assignment / removal (screen 9020).
+*&
+*& Builds the role list from select-option SO_AROLE with validity dates
+*& P_FVALID..P_TVALID (defaulted to today..9999-12-31). For each user in
+*& SO_CROLE it reads the current assignments (BAPI_USER_GET_DETAIL),
+*& then either appends the roles (RB_ADR = add) or removes them
+*& (RB_DER = remove) and writes them back with
+*& BAPI_USER_ACTGROUPS_ASSIGN, committing the change. Per-user status is
+*& shown in the screen-9020 ALV grid.
+*& Side effect: changes user role assignments in the database.
 *&---------------------------------------------------------------------*
 FORM man_role_ass .
 
@@ -7102,8 +7169,17 @@ FORM man_role_ass .
           activitygroups = lt_act
           return         = lt_ret2.
 
+*     BAPI_USER_ACTGROUPS_ASSIGN does not commit on its own; without this
+*     the assignment / removal is not persisted.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
       ls_role_output-userid = so_crole-low.
-      ls_role_output-role_msg = lt_ret2[ 1 ]-message.
+      READ TABLE lt_ret2 INTO DATA(ls_ret2) INDEX 1.
+      IF sy-subrc = 0.
+        ls_role_output-role_msg = ls_ret2-message.
+      ENDIF.
     ENDIF.
     APPEND ls_role_output TO gt_role_output.
     CLEAR: ls_role_output, lt_act, lt_ret1, lt_ret2.
@@ -7160,10 +7236,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form file_role_ass
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& File-based role assignment / removal (screen 9020).
+*&
+*& Reads the uploaded Excel file (P_FILE13, columns User Name / Role
+*& Name / From Date / To Date / Add-Remove Indicator). For each user it
+*& reads the current assignments (BAPI_USER_GET_DETAIL), applies the
+*& add ('A') or delete ('D') rows (dates converted with
+*& CONVERT_DATE_TO_INTERNAL), writes them back with
+*& BAPI_USER_ACTGROUPS_ASSIGN and commits. Per-user status is shown in
+*& the screen-9020 ALV grid.
+*& Side effect: changes user role assignments in the database.
 *&---------------------------------------------------------------------*
 FORM file_role_ass .
 
@@ -7297,8 +7379,16 @@ FORM file_role_ass .
               activitygroups = lt_act
               return         = lt_ret2.
 
+*         Persist the assignment - the BAPI does not commit on its own.
+          CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+            EXPORTING
+              wait = abap_true.
+
           ls_role_output-userid = lv_uname.
-          ls_role_output-role_msg = lt_ret2[ 1 ]-message.
+          READ TABLE lt_ret2 INTO DATA(ls_ret2) INDEX 1.
+          IF sy-subrc = 0.
+            ls_role_output-role_msg = ls_ret2-message.
+          ENDIF.
           APPEND ls_role_output TO gt_role_output.
           CLEAR: ls_role_output, lt_act, lt_ret1, lt_ret2, lv_uname.
         ENDAT.
@@ -7348,10 +7438,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9002
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the role-assignment screen 9002 (manual/file role
+*& assignment tabs; dispatches to man_role_ass / file_role_ass).
 *&---------------------------------------------------------------------*
 FORM user_command_9002.
 
@@ -7717,10 +7805,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_role_assign_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the File-Role-Assignment upload
+*& (P_FILE13): requires an .XLS file whose header row reads 'User Name',
+*& 'Role Name', 'From Date', 'To Date', 'Add/Remove Indicator'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_role_assign_validate .
 
@@ -7810,10 +7898,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_role_copy
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Copies roles from the uploaded Excel file (P_FILE12, columns Original
+*& Role Name / New Role Name).
+*&
+*& Each row calls PRGN_COPY_AGR to copy the source role to the target.
+*& Per-row status is collected in GT_COPY_ROLE and shown in the
+*& screen-9012 ALV grid. Side effect: creates roles in the database.
 *&---------------------------------------------------------------------*
 FORM create_role_copy .
 
@@ -7976,10 +8066,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_copy_role_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Copy-Role upload (P_FILE12):
+*& requires an .XLS file whose header row reads
+*& 'Original Role Name' / 'New Role Name'. Blocks the action on failure.
 *&---------------------------------------------------------------------*
 FORM p_copy_role_validate .
 
@@ -8040,10 +8129,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form monitor_standard_users
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Monitors SAP standard users (e.g. SAP*, DDIC, EARLYWATCH) for their
+*& profile assignments / status and prepares the result for display.
 *&---------------------------------------------------------------------*
 FORM monitor_standard_users .
 
@@ -8131,10 +8218,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form mbs
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Helper for monitor_standard_users (builds the standard-user worklist
+*& / check data).
 *&---------------------------------------------------------------------*
 FORM mbs .
 
@@ -8240,10 +8325,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_user_list
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the standard-user monitoring result as an ALV.
 *&---------------------------------------------------------------------*
 FORM display_user_list .
 
@@ -8339,10 +8421,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form enable_layout_setting
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV helper: enables/saves layout variant settings for the user list.
 *&---------------------------------------------------------------------*
 FORM enable_layout_setting .
 
@@ -8361,10 +8440,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_user_columns
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV helper: builds the field catalogue for the standard-user list.
 *&---------------------------------------------------------------------*
 FORM set_user_columns .
 
@@ -8393,10 +8469,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_prod_password_mass
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-sets productive passwords from the uploaded Excel file (P_INITPW,
+*& columns User ID / Password).
+*&
+*& Validates the header row, then for each user first sets a temporary
+*& password (BAPI_USER_CHANGE with GENERATE_PWD) and then changes it to
+*& the productive password from the file via
+*& SUSR_USER_CHANGE_PASSWORD_RFC, committing on success and rolling back
+*& on error. Status icons / messages are collected in I_OUTTAB_9009 and
+*& shown on screen 9009.
+*& Side effect: changes user passwords in the database.
 *&---------------------------------------------------------------------*
 FORM set_prod_password_mass .
 
@@ -8567,10 +8649,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form mass_maintain_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the mass authorization-value
+*& maintenance upload (P_FILE14): checks the file is supplied and has a
+*& valid layout before maintain_auth_values runs. Blocks the action
+*& otherwise.
 *&---------------------------------------------------------------------*
 FORM mass_maintain_validate .
 
@@ -8702,10 +8784,18 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_auth_values
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Driver for the mass authorization-value maintenance function.
+*&
+*& Reads the uploaded Excel file (P_FILE14, columns Role / Object /
+*& Field name / Authorization value) and, depending on the selected
+*& operation radio buttons (add / delete / deactivate / activate), and
+*& whether the change applies to all instances or a specific instance,
+*& dispatches to the maintain_add_* / maintain_del_* / maintain_dct_* /
+*& maintain_act_* sub-forms. Those apply the change to each role through
+*& the PFCG role API (IF_PFCG_ROLE) and commit.
+*&   -->  FP_INSTANCE  Flag: process a specific authorization instance
+*&                     rather than all instances of the object.
+*& Side effect: changes role authorization data in the database.
 *&---------------------------------------------------------------------*
 FORM maintain_auth_values USING fp_instance TYPE flag.
 
@@ -9459,10 +9549,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LO_MSG_BUFFER
-*&      <-- GT_AUTH_VAL
+*& Collects the PFCG message-buffer messages of an add/delete-value mass
+*& maintenance run into the GT_AUTH_VAL result table (Success line per
+*& role when empty, otherwise mapped Success/Error rows).
+*&   -->  IO_MSG_BUFFER  PFCG message buffer.
 *&---------------------------------------------------------------------*
 FORM update_message  USING  io_msg_buffer TYPE REF TO if_spcg_msg_buffer
                             iv_role       TYPE agr_name
@@ -9504,11 +9594,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message1
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LWA_INIT_EXCEL_ROLE
-*&      --> LWA_AUTH_AUTHS_>OBJECT
-*&      --> LT_CHANGE_VALUES
+*& Variant of update_message that records the per-role / per-object
+*& result of a mass auth-value maintenance step into GT_AUTH_VAL,
+*& including the changed values.
+*&   -->  IV_ROLE  Role processed (further params: object / changed values).
 *&---------------------------------------------------------------------*
 FORM update_message1  USING   iv_role          TYPE agr_name
                               iv_object        TYPE xuobject
@@ -9544,10 +9633,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9009
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the productive-password result (I_OUTTAB_9009)
+*& on screen 9009.
 *&---------------------------------------------------------------------*
 FORM show_result_9009 .
 
@@ -9607,10 +9694,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9024
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the mass auth-value maintenance result
+*& (GT_AUTH_VAL) on screen 9024.
 *&---------------------------------------------------------------------*
 FORM show_result_9024 .
 
@@ -9686,10 +9771,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9025
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the mass auth-value maintenance result on
+*& screen 9025 (instance-specific variant).
 *&---------------------------------------------------------------------*
 FORM show_result_9025 .
 
@@ -9777,10 +9860,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form direct_change
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Analysis (read-only): compares the authorization values (AGR_1251) of
+*& the derived/child roles in SO_AGR against their parent roles and lists
+*& every value that differs - either present in the child but not the
+*& parent, or in the parent but not the child - into GT_DERIVE_ROLE for
+*& display. Used to spot directly-maintained (out-of-sync) derived roles.
 *&---------------------------------------------------------------------*
 FORM direct_change.
 
@@ -9905,10 +9989,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9026
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the directly-changed derived-role analysis
+*& (GT_ORG_FIELD/GT_DERIVE_ROLE) on screen 9026.
 *&---------------------------------------------------------------------*
 FORM show_result_9026 .
 
@@ -9977,10 +10059,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form org_field_change
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Analysis (read-only): lists roles in SO_AGR1 whose organizational
+*& fields (defined in USORG) have been manually modified (AGR_1251
+*& MODIFIED = 'M') into GT_ORG_FIELD for display.
 *&---------------------------------------------------------------------*
 FORM org_field_change .
 
@@ -10191,10 +10272,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9028
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for screen 9028.
 *&---------------------------------------------------------------------*
 FORM get_data_9028.
 
@@ -10497,10 +10575,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9028
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for screen 9028.
 *&---------------------------------------------------------------------*
 FORM user_command_9028 .
 
@@ -10573,10 +10648,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9029
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for screen 9029.
 *&---------------------------------------------------------------------*
 FORM user_command_9029 .
 
@@ -10589,10 +10661,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9030
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for screen 9030 (bulk-request error list).
 *&---------------------------------------------------------------------*
 FORM user_command_9030.
 
@@ -10607,10 +10676,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9029
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the "new request" screen (9031): requires a user id
+*& (P_NUSER) that is a valid, active, unlocked, non-expired dialog/system
+*& user (USR02) and at least one role in S_NROLE. Blocks the action on
+*& any failure.
 *&---------------------------------------------------------------------*
 FORM validate_9029.
 
@@ -10712,10 +10781,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9030
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the bulk-request upload file (P_FILE30, columns User / Role
+*& / Start Date / End Date). Reads the file, checks the layout and row
+*& data and records any problems in I_OUTTAB_9030 (shown on screen 9030).
 *&---------------------------------------------------------------------*
 FORM validate_9030.
 
@@ -11044,10 +11112,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_alv_9029
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the screen-9029 result ALV.
 *&---------------------------------------------------------------------*
 FORM show_result_9029.
 
@@ -11156,10 +11221,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9029
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for screen 9029.
 *&---------------------------------------------------------------------*
 FORM get_data_9029 .
 
@@ -11226,10 +11288,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9031
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for the request-status screen 9031.
 *&---------------------------------------------------------------------*
 FORM get_data_9031 .
 
@@ -11239,10 +11298,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9031
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the request-status result on screen 9031.
 *&---------------------------------------------------------------------*
 FORM show_result_9031.
 
@@ -11348,10 +11404,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9031
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the request-status screen 9031.
 *&---------------------------------------------------------------------*
 FORM user_command_9031 .
 
@@ -12137,10 +12190,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8007
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8007 (request risk-analysis grid used
+*& by approvers).
 *&---------------------------------------------------------------------*
 FORM show_8007.
 
@@ -12183,10 +12234,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_8007
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the approver risk-analysis screen 8007 (approve /
+*& reject; dispatches to approve_after_risk_analysis /
+*& reject_after_risk_anaysis).
 *&---------------------------------------------------------------------*
 FORM user_command_8007.
 
@@ -12207,9 +12257,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form build_fact
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- LI_FCAT
+*& ALV helper: builds the field catalogue (LI_FCAT) for the new-request
+*& role grid on screen 7001.
+*&   <--  P_LI_FCAT  Field catalogue.
 *&---------------------------------------------------------------------*
 FORM build_fact  CHANGING p_li_fcat TYPE lvc_t_fcat.
 
@@ -12285,10 +12335,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form populate_data_7001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the "new request" role table (I_OUTTAB_7001) on screen 7001
+*& from the roles selected in S_NROLE, defaulting validity to
+*& today..9999-12-31, and refreshes the table-control line count.
 *&---------------------------------------------------------------------*
 FORM populate_data_7001 .
 
@@ -12308,10 +12357,15 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form raise_new_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Raises a new role access request.
+*&
+*& Draws a request number from number-range object ZACG_RREQ
+*& (NUMBER_GET_NEXT), determines the requester's line manager from
+*& ZACG_MANAGER, and writes one approver row per requested role into
+*& ZACG_REQ_APROVER (status '02' = pending, manager as first approver),
+*& then commits. Finally triggers asynchronous notification
+*& (ZACG_NOTIFY_USERS_FOR_ROLE_REQ, action 'RQ').
+*& Side effect: inserts request/approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM raise_new_request .
 
@@ -12401,10 +12455,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates a single new-request row (screen 7001) before it is added:
+*& checks the From/To dates (present, not in the past, From <= To), that
+*& there is no pending/open request for the same role+user+period
+*& (ZACG_REQ_APROVER) and that the role is not already assigned to the
+*& user for an overlapping period (AGR_USERS). Raises an error and keeps
+*& the cursor on the offending field otherwise.
 *&---------------------------------------------------------------------*
 FORM validate_7001.
 
@@ -12507,10 +12563,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form approve_after_risk_analysis
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Role-owner approval step (from the risk-analysis grid, screen 8007).
+*&
+*& Validates that the current user (SY-UNAME) is the approver for each
+*& selected role, gathers the residual SoD risks for those roles and, if
+*& any risk remains, opens the mitigation pop-up (screen 7002) to capture
+*& mitigation; otherwise flags the request as mitigated. Prepares
+*& I_OUTTAB_7002 (user / risk / mitigation owner) for that pop-up.
 *&---------------------------------------------------------------------*
 FORM approve_after_risk_analysis.
 
@@ -12621,10 +12680,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7002
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the mitigation pop-up row (screen 7002): the entered
+*& mitigation owner must exist in ZACG_MITG_OWNERS.
 *&---------------------------------------------------------------------*
 FORM validate_7002 .
   MODIFY i_outtab_7002 FROM wa_outtab_7002 INDEX table_7002-current_line.
@@ -12653,10 +12710,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form assign_after_popup
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Finalises role-owner approval after the mitigation pop-up (screen
+*& 7002).
+*&
+*& Marks the matching ZACG_REQ_APROVER rows as actioned (ACTION_TAKEN,
+*& status '03', next sequence number), writes/updates mitigation records
+*& in ZACG_MITG_LOG (new entry on owner change or first mitigation), and
+*& triggers the workflow notification (ZACG_NOTIFY_USERS_FOR_ROLE_REQ,
+*& action 'RA') with the approved roles and mitigation owners.
+*& Runs only when g_mitigated is set.
+*& Side effect: updates approver and mitigation-log tables.
 *&---------------------------------------------------------------------*
 FORM assign_after_popup .
 
@@ -12816,10 +12879,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form reject_after_risk_anaysis
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Rejection counterpart of approve_after_risk_analysis (from the
+*& risk-analysis grid, screen 8007).
+*&
+*& Validates the current user is the approver, collects the selected
+*& roles into I_OUTTAB_7003 and opens the rejection-reason pop-up
+*& (screen 7003). The actual rejection is committed in reject_after_popup.
 *&---------------------------------------------------------------------*
 FORM reject_after_risk_anaysis .
 
@@ -12914,10 +12979,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form reject_after_popup
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Commits the rejection captured on the screen-7003 pop-up.
+*&
+*& Marks the ZACG_REQ_APROVER row as actioned and inserts a follow-up row
+*& with status 4 (rejected) and the rejection reason, commits, and
+*& triggers the workflow notification (ZACG_NOTIFY_USERS_FOR_ROLE_REQ,
+*& action 'RR') with the rejected roles.
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM reject_after_popup.
 
@@ -12981,10 +13049,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7003
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the rejection-reason pop-up row (screen 7003): the reason
+*& must be supplied and at least 10 characters long. Saves the row back
+*& to I_OUTTAB_7003.
 *&---------------------------------------------------------------------*
 FORM validate_7003 .
   MODIFY i_outtab_7003 FROM wa_outtab_7003 INDEX table_7003-current_line.
@@ -13006,10 +13073,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form populate_data_9031
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the request-status worklist (I_OUTTAB_9031) for screen 9031
+*& from ZACG_REQ_APROVER.
 *&---------------------------------------------------------------------*
 FORM populate_data_9031 .
 
@@ -13217,10 +13282,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form paste_from_clipboard
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Reads mitigation-owner values from the front-end clipboard and fills
+*& the empty owner cells of the screen-7002 mitigation table.
 *&---------------------------------------------------------------------*
 FORM paste_from_clipboard.
   DATA:
@@ -13265,9 +13328,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form lock_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_8007
+*& Locks an access request (ENQUEUE_EZACG_REQ_APRV) so two approvers
+*& cannot process it at the same time.
+*&   -->  FP_REQUEST  Request number to lock.
+*&   <--  FP_MESSAGE  Set to ABAP_TRUE if the lock could not be acquired
+*&                    (a message is also displayed).
 *&---------------------------------------------------------------------*
 FORM enqueue_request  USING    fp_request   TYPE zacg_acc_req
                       CHANGING fp_message   TYPE string.
@@ -13294,9 +13359,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form deque_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
+*& Releases the lock on an access request (DEQUEUE_EZACG_REQ_APRV).
+*&   -->  FP_REQUEST  Request number to unlock.
 *&---------------------------------------------------------------------*
 FORM dequeue_request USING fp_request TYPE zacg_acc_req.
 
@@ -13308,10 +13372,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7004
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the manager rejection-reason pop-up (screen 7004):
+*& GV_REJECTION_REASON must be supplied and longer than 10 characters.
 *&---------------------------------------------------------------------*
 FORM validate_7004 .
 
@@ -13331,10 +13393,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_7004
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the manager rejection pop-up (screen 7004). Leaves on
+*& EXIT/CANC; on OKAY leaves and calls update_rejection_from_manager.
 *&---------------------------------------------------------------------*
 FORM user_command_7004 .
 
@@ -13354,10 +13414,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_rejection_from_manager
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Intended to persist a manager's rejection of a request. Currently an
+*& empty placeholder (no implementation).
 *&---------------------------------------------------------------------*
 FORM update_rejection_from_manager .
 
@@ -13365,10 +13423,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form populate_data_9033
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Builds the firefighter-console worklist (I_OUTTAB_9033) for screen
+*& 9033 from the FFID header/log tables.
 *&---------------------------------------------------------------------*
 FORM populate_data_9033.
 
@@ -13465,10 +13521,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9033
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI validation/dispatch for the firefighter console (screen 9033).
+*& On the login (&LGN) / logout function codes it reads the cursor row
+*& from I_OUTTAB_9033, guards that a session can only be logged off by
+*& the user who started it, and copies the row into
+*& WA_SELECTED_LINE_9033 for emergency_login / emergency_logout.
 *&---------------------------------------------------------------------*
 FORM validate_9033.
 
@@ -13538,10 +13595,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9033
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the firefighter console screen 9033 (login/logout;
+*& delegates to validate_9033 / emergency_login / emergency_logout).
 *&---------------------------------------------------------------------*
 FORM user_command_9033.
 
@@ -13560,10 +13615,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form hide_row_9033
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Table-control helper: shows/hides the action column of the current
+*& firefighter-console row (screen 9033) depending on whether a row
+*& exists.
 *&---------------------------------------------------------------------*
 FORM hide_row_9033.
 
@@ -13585,10 +13639,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form emergency_login
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Firefighter (emergency-access) login (screen 7005 / 9033).
+*&
+*& Reads the login reason from the text editor, pings the firefighter
+*& target system (RFC_PING on ZACG_FFID_HDR-FFDST) and opens a remote
+*& session there (SYSTEM_REMOTE_LOGIN). On success it generates a
+*& session id (GUID_CREATE) and writes an active row to the firefighter
+*& log ZACG_FFID_LOG (user, FFID, session, reason, host/IP, timestamps).
+*& Side effect: starts a remote FFID session and logs it.
 *&---------------------------------------------------------------------*
 FORM emergency_login .
 
@@ -13701,10 +13759,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form emergency_logout
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Firefighter (emergency-access) logout (screen 9033).
+*&
+*& For the selected active FFID session (ZACG_FFID_LOG) it asks for
+*& confirmation, terminates the firefighter's sessions on the target
+*& system (TH_DELETE_USER) and closes the log entry (ACTIVE = '',
+*& logout date/time). Side effect: ends the FFID session and updates the
+*& log.
 *&---------------------------------------------------------------------*
 FORM emergency_logout .
 
@@ -13771,10 +13832,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form status_7005
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO status helper for the firefighter login-reason screen 7005 (sets
+*& GUI title / status and initialises the text editor control).
 *&---------------------------------------------------------------------*
 FORM status_7005 .
 
@@ -13831,10 +13890,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_7005
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the firefighter login-reason screen 7005 (OK triggers
+*& emergency_login after validation; CANCEL/EXIT leaves the screen).
 *&---------------------------------------------------------------------*
 FORM user_command_7005 .
 
@@ -13853,10 +13910,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7005
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the firefighter login-reason screen 7005: a reason text
+*& must be entered before login is allowed.
 *&---------------------------------------------------------------------*
 FORM validate_7005 .
 
@@ -13889,10 +13944,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9034
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the firefighter log-report screen 9034.
 *&---------------------------------------------------------------------*
 FORM user_command_9034.
   DATA : lv_answer(1) TYPE c,
@@ -13986,10 +14038,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9034
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only): reads firefighter login log
+*& (ZACG_FFID_LOG) for screen 9034.
 *&---------------------------------------------------------------------*
 FORM get_data_9034.
 
@@ -14012,10 +14062,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_934
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the firefighter login-log report on screen 9034.
 *&---------------------------------------------------------------------*
 FORM show_result_9034 .
 
@@ -14121,10 +14168,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_tlog_reject
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Writes rejection rows for firefighter transaction-log entries: for
+*& each reviewed entry in I_OUTTAB_7006 it stores a 'R' (rejected) record
+*& in ZACG_FFID_TLOG with the reviewer, timestamp and rejection reason.
+*& Side effect: updates the FFID transaction log.
 *&---------------------------------------------------------------------*
 FORM update_tlog_reject .
   DATA: lt_tlog TYPE STANDARD TABLE OF zacg_ffid_tlog.
@@ -14148,10 +14195,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7006
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Saves the current FFID transaction-log review row (screen 7006) back
+*& to I_OUTTAB_7006.
 *&---------------------------------------------------------------------*
 FORM validate_7006 .
   MODIFY i_outtab_7006 FROM wa_outtab_7006 INDEX table_7006-current_line.
@@ -14159,10 +14204,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9035
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the FFID transaction-log review selection (screen 9035):
+*& requires a date range (S_DAT35) before the log can be read.
 *&---------------------------------------------------------------------*
 FORM validate_9035.
 
@@ -14179,10 +14222,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9035
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the firefighter transaction-log report on
+*& screen 9035.
 *&---------------------------------------------------------------------*
 FORM show_result_9035.
 
@@ -14338,10 +14379,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9035
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only): reads firefighter transaction log
+*& (ZACG_FFID_TLOG) for the selected date range on screen 9035.
 *&---------------------------------------------------------------------*
 FORM get_data_9035.
 
@@ -14415,10 +14454,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_ffid_login_reason
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the firefighter login reason for the selected
+*& log row in a popup.
+*&   -->  ROW  Selected ALV row.
 *&---------------------------------------------------------------------*
 FORM display_ffid_login_reason USING row TYPE lvc_s_row.
 
@@ -14462,9 +14500,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_ffid_assessment
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> E_ROW_ID
+*& Display helper: shows the firefighter risk-assessment / activity
+*& detail for the selected transaction-log row in a popup.
+*&   -->  ROW  Selected ALV row.
 *&---------------------------------------------------------------------*
 FORM display_ffid_assessment  USING  row TYPE lvc_s_row.
 
@@ -14564,10 +14602,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9036
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the firefighter log-review result on screen 9036.
 *&---------------------------------------------------------------------*
 FORM show_result_9036.
 
@@ -14648,10 +14683,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9036
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for the firefighter log-review
+*& screen 9036.
 *&---------------------------------------------------------------------*
 FORM get_data_9036.
 
@@ -14765,10 +14798,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form adjust_fieldcatalog
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV helper: adjusts the field catalogue (column texts / visibility)
+*& for the firefighter transaction-log grid.
 *&---------------------------------------------------------------------*
 FORM adjust_fieldcatalog .
 
@@ -14814,7 +14845,12 @@ FORM adjust_fieldcatalog .
       it_fieldcatalog = li_fieldcat.
 
 ENDFORM.
-
+*&---------------------------------------------------------------------*
+*& Form show_result_9030
+*&---------------------------------------------------------------------*
+*& Display helper: shows the bulk-request file validation errors
+*& (I_OUTTAB_9030: row number / error message) in the screen-9030 ALV.
+*&---------------------------------------------------------------------*
 FORM show_result_9030.
 
 
@@ -14879,10 +14915,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form raise_bulk_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Raises a bulk (multi-user) access request from the uploaded data
+*& (I_FILE_DATA_9030).
+*&
+*& Draws a bulk request number (ZACG_BREQ -> 'BRQ...') and child request
+*& numbers (ZACG_CREQ), builds the approver rows (ZACG_REQ_APROVER) and
+*& the bulk-to-child mapping (ZACG_REQ_BLK_MAP), and saves them.
+*& Side effect: inserts request/approver/mapping rows in the database.
 *&---------------------------------------------------------------------*
 FORM raise_bulk_request.
 
@@ -14997,10 +15036,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the admin request-management grid (I_OUTTAB_9037)
+*& on screen 9037.
 *&---------------------------------------------------------------------*
 FORM show_result_9037.
 
@@ -15113,10 +15150,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the admin request-management screen 9037 (approve /
+*& cancel; dispatches to approve_req_9037 / cancel_req_9037).
 *&---------------------------------------------------------------------*
 FORM user_command_9037.
 
@@ -15134,10 +15169,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only): reads request/approver data
+*& (ZACG_REQ_APROVER) and derives the display status for screen 9037.
 *&---------------------------------------------------------------------*
 FORM get_data_9037.
 
@@ -15255,11 +15288,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message_dins
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LO_MSG_BUFFER
-*&      --> LWA_NODE_ROOT_>ROLE
-*&      --> P_
+*& Collects the result messages from a deactivate/activate-instance mass
+*& maintenance run (PFCG message buffer) into the GT_AUTH_VAL result
+*& table, producing a Success line per role when the buffer is empty or
+*& mapping the buffer messages to Success/Error otherwise.
+*&   -->  IO_MSG_BUFFER  PFCG message buffer of the operation.
+*&   -->  IV_ROLE        Role the messages relate to (blank = all).
+*&   -->  IV_OBJECT      Authorization object processed.
+*&   -->  IV_AUTH        Authorization instance processed.
 *&---------------------------------------------------------------------*
 FORM update_message_dins  USING io_msg_buffer TYPE REF TO if_spcg_msg_buffer
                                 iv_role       TYPE agr_name
@@ -15320,10 +15356,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form cancel_req_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Admin cancellation of selected request line items (screen 9037).
+*&
+*& For each selected, not-yet-actioned row it marks the current
+*& ZACG_REQ_APROVER entry as actioned and appends a follow-up row with
+*& status 05 (cancelled), approver_role 3 (admin) and the next sequence
+*& number, then commits and refreshes the grid (get_data_9037).
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM cancel_req_9037 .
 
@@ -15398,16 +15437,17 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form approve_req_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Admin approval of selected request line items (screen 9037).
+*&
+*& For each selected, not-yet-actioned row it marks the current
+*& ZACG_REQ_APROVER entry as actioned and appends a follow-up admin
+*& approval row, then commits and refreshes the grid. Also checks role
+*& ownership (ZACG_ROLE_OWNERS) before approving.
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM approve_req_9037 .
 
   DATA : lv_message  TYPE string.
-
-  BREAK : rounak.
 
   o_grid_9037->get_selected_rows(
     IMPORTING
@@ -15509,10 +15549,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9041
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for the mass-maintenance review
+*& screen 9041.
 *&---------------------------------------------------------------------*
 FORM get_data_9041.
 
@@ -15523,10 +15561,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9041
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the mass authorization-value maintenance upload(s) for
+*& screen 9041: a role/auth-value file (columns Role / Object / Field
+*& name / Authorization value) and/or a user/role file (columns User /
+*& Role). Reads the file(s), checks the layout and records any problems
+*& for display before the maintenance is run.
 *&---------------------------------------------------------------------*
 FORM validate_9041 .
 
@@ -15802,10 +15841,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form sub_get_combine_file_data
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Helper: merges the data rows and the text rows of the two uploaded
+*& mass-maintenance files into a single combined internal table.
 *&---------------------------------------------------------------------*
 FORM sub_get_combine_file_data.
 
@@ -15995,10 +16032,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9042
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the mass authorization-value maintenance upload for screen
+*& 9042 (columns Role / Object / Field name / Authorization value). Reads
+*& the file, checks the layout and records any problems for display
+*& before the maintenance is run.
 *&---------------------------------------------------------------------*
 FORM validate_9042 .
 
@@ -16192,10 +16229,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_data_9042
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Data-retrieval helper (read-only) for the mass-maintenance review
+*& screen 9042.
 *&---------------------------------------------------------------------*
 FORM get_data_9042 .
 
@@ -16351,10 +16386,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8008
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8008 (mass-maintenance result variant).
 *&---------------------------------------------------------------------*
 FORM show_8008 .
 
@@ -16408,10 +16440,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9042
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the screen-9042 mass-maintenance review result.
 *&---------------------------------------------------------------------*
 FORM show_result_9042 .
 
@@ -16517,10 +16546,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_6001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for subscreen 6001 (mass-maintenance review,
+*& role/auth-value file).
 *&---------------------------------------------------------------------*
 FORM show_6001 .
 
@@ -16572,10 +16599,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9041
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the screen-9041 mass-maintenance review result.
 *&---------------------------------------------------------------------*
 FORM show_result_9041 .
 
@@ -16684,10 +16708,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8009
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8009 (mass-maintenance result variant).
 *&---------------------------------------------------------------------*
 FORM show_8009 .
 
@@ -16734,10 +16755,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_6002
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for subscreen 6002 (mass-maintenance review,
+*& user/role file).
 *&---------------------------------------------------------------------*
 FORM show_6002 .
 
@@ -16790,10 +16809,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_all_object
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value to every
+*& instance of the given object in the role (PFCG role API) and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_all_object .
 
@@ -17018,10 +17036,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value to one specific
+*& authorization instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_spec_inst .
 
@@ -17198,10 +17215,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_new_object
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: inserts a new authorization object (with the
+*& given field/value) into the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_new_object .
 
@@ -17471,10 +17487,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_del_all_insts
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deletes the authorization value from every
+*& instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_del_all_insts .
 
@@ -17717,10 +17732,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_del_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deletes the authorization value from one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_del_from_spec_inst .
 
@@ -17967,10 +17981,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_dct_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deactivates the authorization in one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_dct_from_spec_inst .
 
@@ -18136,10 +18149,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_act_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: (re)activates the authorization in one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_act_from_spec_inst .
 
@@ -18306,10 +18318,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_new_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value in a new
+*& authorization instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_new_inst .
 
@@ -18531,10 +18542,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form add_message
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LWA_MESSAGE
-*&      --> LO_MSG_BUFFER
+*& Helper: appends a single message to the given PFCG message buffer
+*& during mass auth-value maintenance.
+*&   -->  P_LWA_MESSAGE  Message to add.
+*&   -->  LO_MSG_BUFFER  Target PFCG message buffer.
 *&---------------------------------------------------------------------*
 FORM add_message  USING    p_lwa_message   TYPE if_spcg_msg_buffer=>ty_messages
                            p_lo_msg_buffer TYPE REF TO if_spcg_msg_buffer.

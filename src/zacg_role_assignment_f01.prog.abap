@@ -4,18 +4,23 @@
 *&---------------------------------------------------------------------*
 *& Form assign_roles
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Assigns the roles entered in select-option SO_ROLE to the user
+*& P_USER for the validity period P_BEGDA..P_ENDDA.
+*&
+*& The user's existing role assignments are first read with
+*& BAPI_USER_GET_DETAIL and the new roles are appended to them so that
+*& current assignments are preserved. The combined list is then written
+*& back with BAPI_USER_ACTGROUPS_ASSIGN and committed.
+*&
+*& Result messages (BAPIRET2) are returned in the global table
+*& GT_ROLE_OUTPUT for display by FORM display_alv.
 *&---------------------------------------------------------------------*
 FORM assign_roles .
-  DATA: ls_act_ad      TYPE bapiagr,
-        ls_role_output TYPE bapiret2,
-        lt_act         TYPE STANDARD TABLE OF bapiagr,
-        lt_act_ad      TYPE STANDARD TABLE OF bapiagr,
-        lt_ret1        TYPE STANDARD TABLE OF bapiret2,
-        lt_ret2        TYPE STANDARD TABLE OF bapiret2.
+  DATA: ls_act_ad TYPE bapiagr,
+        lt_act    TYPE STANDARD TABLE OF bapiagr,
+        lt_act_ad TYPE STANDARD TABLE OF bapiagr,
+        lt_ret1   TYPE STANDARD TABLE OF bapiret2,
+        lt_ret2   TYPE STANDARD TABLE OF bapiret2.
 
   LOOP AT so_role.
     ls_act_ad-agr_name = so_role-low.
@@ -42,17 +47,21 @@ FORM assign_roles .
         activitygroups = lt_act
         return         = lt_ret2.
 
+*   BAPI_USER_ACTGROUPS_ASSIGN does not commit on its own; without this
+*   the assignment is not persisted.
+    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+      EXPORTING
+        wait = abap_true.
+
     gt_role_output = lt_ret2.
   ENDIF.
-  APPEND ls_role_output TO gt_role_output.
 ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_alv
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Displays the role-assignment result messages collected in
+*& GT_ROLE_OUTPUT as a simple ALV grid (CL_SALV_TABLE). Any SALV
+*& exception is caught and its text stored in lv_message.
 *&---------------------------------------------------------------------*
 FORM display_alv .
   DATA: lo_alv           TYPE REF TO cl_salv_table.

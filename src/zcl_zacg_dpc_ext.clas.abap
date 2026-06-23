@@ -1,3 +1,19 @@
+"! <p class="shorttext synchronized">ZACG Security Dashboard - OData Data Provider (extension)</p>
+"! Extension class of the SAP Gateway data provider for service ZACG_SRV.
+"! Each redefined *_GET_ENTITYSET method feeds one tile/chart of the
+"! Security Dashboard Fiori apps (zacgdashboard / zsecrtdashboard) with
+"! Segregation-of-Duties (SoD) and critical-access analytics.
+"!
+"! Common pattern: the methods read the result of the most recent
+"! successfully finished dashboard background job (report ZACG_DASHBOARD,
+"! checked against TBTCO status 'F') from table ZACG_DASHBOARD and return
+"! the slice relevant to that entity set (role level / process level /
+"! user level, summary data or chart/graph data).
+"!
+"! NOTE (see code review): these methods do not perform an explicit
+"! AUTHORITY-CHECK; access relies on the Gateway/ICF layer. Sensitive
+"! security analytics should additionally be guarded here (e.g.
+"! ZACG_DASH).
 class ZCL_ZACG_DPC_EXT definition
   public
   inheriting from ZCL_ZACG_DPC
@@ -39,6 +55,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticalroleleve_get_entityset.
+*   Critical roles at ROLE level (summary tile) from the latest dashboard run.
 
     DATA:
       li_data       TYPE STANDARD TABLE OF zacg_dashboard.
@@ -129,6 +146,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD sodrolelevelgrap_get_entityset.
+*   SoD violations at ROLE level - chart/graph data.
 
     DATA:
       li_data       TYPE STANDARD TABLE OF zacg_dashboard.
@@ -219,6 +237,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticalrolele01_get_entityset.
+*   Critical roles at ROLE level (detail/drill-down variant).
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -360,6 +379,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticalroleproc_get_entityset.
+*   Critical roles at PROCESS-area level (summary).
 
     DATA:
       lv_count      TYPE i,
@@ -450,6 +470,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD sodroleleveldata_get_entityset.
+*   SoD violations at ROLE level - tabular data.
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -589,6 +610,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD sodroleprocessle_get_entityset.
+*   SoD violations at PROCESS-area level - tabular data.
 
     DATA:
       lv_count      TYPE i,
@@ -678,6 +700,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticalrolepr01_get_entityset.
+*   Critical roles at PROCESS-area level (detail/drill-down variant).
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -844,6 +867,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticaluserle01_get_entityset.
+*   Critical users at USER level (detail/drill-down variant).
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -984,6 +1008,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD criticaluserleve_get_entityset.
+*   Critical users at USER level (summary).
 
     DATA:
       lv_usercount TYPE i,
@@ -1152,6 +1177,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD sodroleprocess01_get_entityset.
+*   SoD violations at PROCESS-area level - chart/graph data.
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -1304,6 +1330,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD soduserleveldata_get_entityset.
+*   SoD violations at USER level - tabular data.
 
     DATA:
       lv_jobname  TYPE btcjob,
@@ -1445,6 +1472,7 @@ CLASS ZCL_ZACG_DPC_EXT IMPLEMENTATION.
 
 
   METHOD soduserlevelgrap_get_entityset.
+*   SoD violations at USER level - chart/graph data.
 
     DATA:
       lv_usercount TYPE i,
