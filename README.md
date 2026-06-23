@@ -273,6 +273,23 @@ Schedule these reports as periodic jobs (e.g. in `SM36`):
 - **UI:** classic dynpro + ALV for administration; SAPUI5 for analytical dashboards.
 - **Mass operations:** standardized around *download-template → fill → upload → execute*, implemented with XSLT transformations and `ALSMEX`-style Excel conversion.
 
+### Navigating the source
+
+Almost all of `ZACG_MAIN`'s logic lives in one ~18.6k-line include, `zacg_mainf01.prog.abap` (~175 `FORM` routines). Routine names follow screen-numbered conventions, which is the fastest way to find code:
+
+| Pattern | Meaning |
+|---|---|
+| `show_<nnnn>` | PBO display logic for dynpro `<nnnn>` |
+| `show_result_<nnnn>` | Builds the result ALV for screen `<nnnn>` |
+| `get_data_<nnnn>` | Read-only data retrieval for screen `<nnnn>` |
+| `user_command_<nnnn>` | PAI handler for screen `<nnnn>` |
+| `validate_<nnnn>` / `p_<x>_validate` | Selection-screen / pop-up input validation |
+| `maintain_add_* / _del_* / _dct_* / _act_*` | Mass auth-value maintenance helpers (via `IF_PFCG_ROLE`) |
+
+Global result tables are `gt_*` / `i_outtab_<nnnn>`; ALV controls are `o_conttainer_<nnnn>` / `o_grid_<nnnn>` (note the `conttainer` typo). Each `FORM` carries a header comment describing its purpose, flow, side effects (DB writes/commits) and any known issues.
+
+> **For Claude Code / AI agents:** see [`CLAUDE.md`](CLAUDE.md) for a condensed architecture map, conventions, and a list of known landmines (missing BAPI commits, hardcoded secrets, the `ZACG_ENCRIPT_PROG` program-hiding tool, etc.).
+
 ---
 
 ## License
