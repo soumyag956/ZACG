@@ -5031,10 +5031,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form change_description_of_roles
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-changes role (PFCG) descriptions from the uploaded Excel file
+*& (P_FILE4, columns Role / Description).
+*&
+*& Each row is applied with PRGN_RFC_CHANGE_TEXTS for the logon language;
+*& per-role status (type / message) is collected in GT_ROLE_DES and shown
+*& in the screen-9011 ALV grid.
+*& Side effect: updates role texts in the database.
 *&---------------------------------------------------------------------*
 FORM change_description_of_roles .
 
@@ -5186,9 +5189,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_FILE4
+*& Generic Excel-template downloader used by the role-maintenance
+*& functions. Runs the given XSLT transformation to produce the empty
+*& template, converts it to binary and saves it to a folder chosen by
+*& the user.
+*&   -->  I_FILENAME    File name to save (e.g. '\Role_Desc.xls').
+*&   -->  I_TRANS_NAME  Name of the XSLT transformation to call.
 *&---------------------------------------------------------------------*
 FORM download_template USING i_filename    TYPE string
                              i_trans_name  TYPE cxsltdesc.
@@ -5419,10 +5425,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form derive_role_create
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-creates derived (child) roles from the uploaded Excel file
+*& (P_FILE5, columns Parent Role / Child Role).
+*&
+*& Each row calls PRGN_RFC_CREATE_ACTIVITY_GROUP to derive the child
+*& role from its parent. Per-row status is collected in GT_DR_ROLE and
+*& shown in the screen-9012 ALV grid.
+*& Side effect: creates roles in the database.
 *&---------------------------------------------------------------------*
 FORM derive_role_create .
 
@@ -5576,10 +5585,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_dirole_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Delete-Inheritance upload
+*& (P_FILE6): requires an .XLS file whose header row reads
+*& 'Parent Role' / 'Child Role'. Clears sy-ucomm / g_ucomm and raises an
+*& error otherwise so the action is not executed.
 *&---------------------------------------------------------------------*
 FORM p_dirole_validate .
 
@@ -5640,10 +5649,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form delete_inheritance
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Removes the parent/child inheritance from derived roles listed in the
+*& uploaded Excel file (P_FILE6, columns Parent Role / Child Role).
+*&
+*& Each child role is detached with PRGN_RFC_DELETE_DERIVATION. Per-row
+*& status is collected in GT_DR_ROLE and shown in the screen-9013 ALV.
+*& Side effect: changes role derivation in the database.
 *&---------------------------------------------------------------------*
 FORM delete_inheritance .
 
