@@ -1,3 +1,7 @@
+"! <p class="shorttext synchronized">ZACG_SRV - generated OData Data Provider base</p>
+"! SAP Gateway-generated base data-provider class for service ZACG_SRV.
+"! Generated/regenerated from the service definition - do NOT edit by
+"! hand. All custom logic lives in the subclass ZCL_ZACG_DPC_EXT.
 class ZCL_ZACG_DPC definition
   public
   inheriting from /IWBEP/CL_MGW_PUSH_ABS_DATA

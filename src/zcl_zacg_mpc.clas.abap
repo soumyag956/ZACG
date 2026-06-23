@@ -1,3 +1,8 @@
+"! <p class="shorttext synchronized">ZACG_SRV - generated OData Model Provider base</p>
+"! SAP Gateway-generated base model-provider class for service ZACG_SRV:
+"! defines the entity types (SoD / critical role / user structures) and
+"! entity sets. Generated/regenerated from the service definition - do
+"! NOT edit by hand. Model extensions live in ZCL_ZACG_MPC_EXT.
 class ZCL_ZACG_MPC definition
   public
   inheriting from /IWBEP/CL_MGW_PUSH_ABS_MODEL
