@@ -4681,10 +4681,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_init_password
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Set a productive password for the users in SO_UPW1 (manual variant).
+*&
+*& NOTE: the body is currently fully commented out, so this form is a
+*& no-op. The intended logic (kept as comments) generated a temporary
+*& password with BAPI_USER_CHANGE and then set the target productive
+*& password P_PWD1 via SUSR_USER_CHANGE_PASSWORD_RFC, committing on
+*& success and rolling back on error.
 *&---------------------------------------------------------------------*
 FORM set_prod_password_manual.
 
@@ -7842,10 +7845,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_role_assign_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the File-Role-Assignment upload
+*& (P_FILE13): requires an .XLS file whose header row reads 'User Name',
+*& 'Role Name', 'From Date', 'To Date', 'Add/Remove Indicator'.
+*& Blocks the action on any failure.
 *&---------------------------------------------------------------------*
 FORM p_role_assign_validate .
 
@@ -7935,10 +7938,12 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_role_copy
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Copies roles from the uploaded Excel file (P_FILE12, columns Original
+*& Role Name / New Role Name).
+*&
+*& Each row calls PRGN_COPY_AGR to copy the source role to the target.
+*& Per-row status is collected in GT_COPY_ROLE and shown in the
+*& screen-9012 ALV grid. Side effect: creates roles in the database.
 *&---------------------------------------------------------------------*
 FORM create_role_copy .
 
@@ -8101,10 +8106,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_copy_role_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& AT SELECTION-SCREEN validation for the Copy-Role upload (P_FILE12):
+*& requires an .XLS file whose header row reads
+*& 'Original Role Name' / 'New Role Name'. Blocks the action on failure.
 *&---------------------------------------------------------------------*
 FORM p_copy_role_validate .
 
@@ -8518,10 +8522,16 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_prod_password_mass
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-sets productive passwords from the uploaded Excel file (P_INITPW,
+*& columns User ID / Password).
+*&
+*& Validates the header row, then for each user first sets a temporary
+*& password (BAPI_USER_CHANGE with GENERATE_PWD) and then changes it to
+*& the productive password from the file via
+*& SUSR_USER_CHANGE_PASSWORD_RFC, committing on success and rolling back
+*& on error. Status icons / messages are collected in I_OUTTAB_9009 and
+*& shown on screen 9009.
+*& Side effect: changes user passwords in the database.
 *&---------------------------------------------------------------------*
 FORM set_prod_password_mass .
 
@@ -8827,10 +8837,18 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_auth_values
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Driver for the mass authorization-value maintenance function.
+*&
+*& Reads the uploaded Excel file (P_FILE14, columns Role / Object /
+*& Field name / Authorization value) and, depending on the selected
+*& operation radio buttons (add / delete / deactivate / activate), and
+*& whether the change applies to all instances or a specific instance,
+*& dispatches to the maintain_add_* / maintain_del_* / maintain_dct_* /
+*& maintain_act_* sub-forms. Those apply the change to each role through
+*& the PFCG role API (IF_PFCG_ROLE) and commit.
+*&   -->  FP_INSTANCE  Flag: process a specific authorization instance
+*&                     rather than all instances of the object.
+*& Side effect: changes role authorization data in the database.
 *&---------------------------------------------------------------------*
 FORM maintain_auth_values USING fp_instance TYPE flag.
 
@@ -16915,10 +16933,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_all_object
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value to every
+*& instance of the given object in the role (PFCG role API) and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_all_object .
 
@@ -17143,10 +17160,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value to one specific
+*& authorization instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_spec_inst .
 
@@ -17323,10 +17339,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_new_object
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: inserts a new authorization object (with the
+*& given field/value) into the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_new_object .
 
@@ -17596,10 +17611,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_del_all_insts
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deletes the authorization value from every
+*& instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_del_all_insts .
 
@@ -17842,10 +17856,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_del_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deletes the authorization value from one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_del_from_spec_inst .
 
@@ -18092,10 +18105,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_dct_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: deactivates the authorization in one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_dct_from_spec_inst .
 
@@ -18261,10 +18273,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_act_from_spec_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: (re)activates the authorization in one
+*& specific instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_act_from_spec_inst .
 
@@ -18431,10 +18442,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form maintain_add_in_new_inst
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-maintenance helper: adds the authorization value in a new
+*& authorization instance of the object in the role and commits.
+*& Called from maintain_auth_values.
 *&---------------------------------------------------------------------*
 FORM maintain_add_in_new_inst .
 
