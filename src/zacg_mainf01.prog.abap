@@ -3985,10 +3985,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form handle_toolbar
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> E_OBJECT
-*&      --> E_INTERACTIVE
+*& ALV event handler: adds the custom buttons (e.g. download) to the
+*& grid toolbar.
+*&   -->  E_OBJECT       Toolbar event object.
+*&   -->  E_INTERACTIVE  Interactive-call flag.
 *&---------------------------------------------------------------------*
 FORM handle_toolbar  USING    e_object TYPE REF TO cl_alv_event_toolbar_set
                               e_interactive.
@@ -4046,10 +4046,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form download_9001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Download helper: exports the screen-8001 role-risk summary to Excel.
 *&---------------------------------------------------------------------*
 FORM download_8001.
 
@@ -4460,9 +4457,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& text
 *&---------------------------------------------------------------------*
-*&      --> LV_EXC_PATH
-*&      --> I_DETAIL_9001
-*&      --> LRA_ROLE
+*& Download helper: exports the role-risk DETAIL result to an Excel file
+*& at the given path (via the role-detail XSLT transformation).
+*&   -->  I_PATH  Target file path.
 *&---------------------------------------------------------------------*
 FORM download_role_detail_excel  USING    VALUE(i_path)
                                           VALUE(i_data) TYPE zacg_t_risk_detail
@@ -4826,9 +4823,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE3
+*& Opens the front-end file-open dialog and returns the selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath  CHANGING c_file.
 
@@ -4854,9 +4850,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE42
+*& Opens the front-end file-open dialog (xlsx/txt filter) and returns the
+*& selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath_xlsx_txt_41  CHANGING c_file.
 
@@ -4898,9 +4894,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form get_filepath
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- P_FILE42
+*& Opens the front-end file-open dialog (xlsx/txt filter) and returns the
+*& selected path.
+*&   <--  C_FILE  Selected file name.
 *&---------------------------------------------------------------------*
 FORM get_filepath_xlsx_txt_42  CHANGING c_file.
 
@@ -9561,10 +9557,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LO_MSG_BUFFER
-*&      <-- GT_AUTH_VAL
+*& Collects the PFCG message-buffer messages of an add/delete-value mass
+*& maintenance run into the GT_AUTH_VAL result table (Success line per
+*& role when empty, otherwise mapped Success/Error rows).
+*&   -->  IO_MSG_BUFFER  PFCG message buffer.
 *&---------------------------------------------------------------------*
 FORM update_message  USING  io_msg_buffer TYPE REF TO if_spcg_msg_buffer
                             iv_role       TYPE agr_name
@@ -9608,9 +9604,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& text
 *&---------------------------------------------------------------------*
-*&      --> LWA_INIT_EXCEL_ROLE
-*&      --> LWA_AUTH_AUTHS_>OBJECT
-*&      --> LT_CHANGE_VALUES
+*& Variant of update_message that records the per-role / per-object
+*& result of a mass auth-value maintenance step into GT_AUTH_VAL,
+*& including the changed values.
+*&   -->  IV_ROLE  Role processed (further params: object / changed values).
 *&---------------------------------------------------------------------*
 FORM update_message1  USING   iv_role          TYPE agr_name
                               iv_object        TYPE xuobject
@@ -12270,9 +12267,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form build_fact
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      <-- LI_FCAT
+*& ALV helper: builds the field catalogue (LI_FCAT) for the new-request
+*& role grid on screen 7001.
+*&   <--  P_LI_FCAT  Field catalogue.
 *&---------------------------------------------------------------------*
 FORM build_fact  CHANGING p_li_fcat TYPE lvc_t_fcat.
 
@@ -14467,10 +14464,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_ffid_login_reason
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the firefighter login reason for the selected
+*& log row in a popup.
+*&   -->  ROW  Selected ALV row.
 *&---------------------------------------------------------------------*
 FORM display_ffid_login_reason USING row TYPE lvc_s_row.
 
@@ -14514,9 +14510,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form display_ffid_assessment
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> E_ROW_ID
+*& Display helper: shows the firefighter risk-assessment / activity
+*& detail for the selected transaction-log row in a popup.
+*&   -->  ROW  Selected ALV row.
 *&---------------------------------------------------------------------*
 FORM display_ffid_assessment  USING  row TYPE lvc_s_row.
 
@@ -14812,10 +14808,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form adjust_fieldcatalog
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& ALV helper: adjusts the field catalogue (column texts / visibility)
+*& for the firefighter transaction-log grid.
 *&---------------------------------------------------------------------*
 FORM adjust_fieldcatalog .
 
@@ -16402,10 +16396,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8008
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8008 (mass-maintenance result variant).
 *&---------------------------------------------------------------------*
 FORM show_8008 .
 
@@ -16459,10 +16450,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9042
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the screen-9042 mass-maintenance review result.
 *&---------------------------------------------------------------------*
 FORM show_result_9042 .
 
@@ -16568,10 +16556,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_6001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for subscreen 6001 (mass-maintenance review,
+*& role/auth-value file).
 *&---------------------------------------------------------------------*
 FORM show_6001 .
 
@@ -16623,10 +16609,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_result_9041
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Display helper: shows the screen-9041 mass-maintenance review result.
 *&---------------------------------------------------------------------*
 FORM show_result_9041 .
 
@@ -16735,10 +16718,7 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_8009
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for screen 8009 (mass-maintenance result variant).
 *&---------------------------------------------------------------------*
 FORM show_8009 .
 
@@ -16785,10 +16765,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form show_6002
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PBO display helper for subscreen 6002 (mass-maintenance review,
+*& user/role file).
 *&---------------------------------------------------------------------*
 FORM show_6002 .
 
@@ -18574,10 +18552,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form add_message
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LWA_MESSAGE
-*&      --> LO_MSG_BUFFER
+*& Helper: appends a single message to the given PFCG message buffer
+*& during mass auth-value maintenance.
+*&   -->  P_LWA_MESSAGE  Message to add.
+*&   -->  LO_MSG_BUFFER  Target PFCG message buffer.
 *&---------------------------------------------------------------------*
 FORM add_message  USING    p_lwa_message   TYPE if_spcg_msg_buffer=>ty_messages
                            p_lo_msg_buffer TYPE REF TO if_spcg_msg_buffer.
