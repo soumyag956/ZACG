@@ -1,3 +1,16 @@
+"! <p class="shorttext synchronized">ZACG Role-Request Workflow Business Object</p>
+"! Workflow business object (BI_OBJECT / BI_PERSISTENT / IF_WORKFLOW) for
+"! the ZACG access-request approval process. The instance key (KEY /
+"! LPOR-INSTID) is the access-request number (ZACG_ACC_REQ).
+"!
+"! It exposes the helper methods used by the SAP Business Workflow to:
+"!  - read the requested / approved / rejected roles and their texts,
+"!  - determine the unique role owners and mitigation owners and iterate
+"!    over them one-by-one (for dynamic parallel approval steps),
+"!  - resolve approver / owner e-mail addresses, and
+"!  - finally provision the approved roles (ASSIGN_ROLE) by scheduling
+"!    report ZACG_ROLE_ASSIGNMENT as a background job.
+"! The TRIGGER event carries the action and the parties to be notified.
 class ZACG_CL_WF_ROLE_ASSIGNMENT definition
   public
   final
@@ -91,6 +104,13 @@ CLASS ZACG_CL_WF_ROLE_ASSIGNMENT IMPLEMENTATION.
 
 
 METHOD assign_role.
+* Provisions the approved roles for the request: reads the requester and
+* validity dates from ZACG_REQ_APROVER, builds a selection table and
+* schedules report ZACG_ROLE_ASSIGNMENT as a background job (user
+* ZACG_ADMIN) to perform the actual BAPI_USER_ACTGROUPS_ASSIGN.
+* NOTE: the trailing WHILE lines( it_approved_roles ) = sy-dbcnt loop is
+* a busy-wait that can spin (it re-reads AGR_USERS with no exit/timeout);
+* it should be reworked into a bounded poll with a wait/timeout.
   DATA: lv_jobcount TYPE btcjobcnt,
         lv_jobname  TYPE btcjob,
         li_seltab   TYPE STANDARD TABLE OF rsparams.
@@ -198,7 +218,8 @@ ENDMETHOD.
 
 
   METHOD bi_persistent~find_by_lpor.
-
+*   Workflow persistence: re-instantiates the object from its persistent
+*   object reference (the request number stored in LPOR-INSTID).
     CREATE OBJECT result TYPE zacg_cl_wf_role_assignment
       EXPORTING
         id = lpor-instid(10).
@@ -218,7 +239,8 @@ ENDMETHOD.
 
 
   METHOD constructor.
-
+*   Builds the persistent object reference from the request number (ID):
+*   instance id = request, category 'CL', type = this class.
     lpor-instid = id.
     lpor-catid  = 'CL'.
     lpor-typeid = 'ZACG_CL_WF_ROLE_ASSIGNMENT'.
@@ -227,7 +249,8 @@ ENDMETHOD.
 
 
   METHOD get_requested_roles.
-
+*   Returns the roles of the request (first sequence) with their texts
+*   (ZACG_REQ_APROVER joined to AGR_TEXTS in the logon language).
     SELECT _a~agr_name, _b~text
       FROM zacg_req_aprover AS _a
       INNER JOIN agr_texts AS _b
@@ -244,7 +267,10 @@ ENDMETHOD.
 
 
 METHOD get_role_and_role_owner.
-
+* Iterator step: returns the next role owner (by descending counter
+* CV_ROLE_OWNER_COUNT) with their e-mail (PUSER002) and the roles still
+* pending their approval, then decrements the counter. Used to drive a
+* dynamic parallel "one branch per role owner" workflow step.
   CLEAR es_role_manager_email.
 
   READ TABLE it_role_manager INTO DATA(lwa_role_manager)
@@ -279,7 +305,9 @@ ENDMETHOD.
 
 
 METHOD get_role_owners.
-
+* Returns the distinct role owners (approver_role 2, status 03) for the
+* approved roles of the request, indexed 1..n, and their count - the
+* input to the get_role_and_role_owner iterator.
   SELECT *
     FROM ZACG_REQ_APROVER
     INTO TABLE @DATA(li_role_owners)
@@ -304,7 +332,8 @@ ENDMETHOD.
 
 
 METHOD get_single_mitigation_owner.
-
+* Iterator step: returns the next mitigation owner (by descending counter
+* CV_MITIGATION_COUNT) and decrements the counter.
   CLEAR es_mitigation_owner.
 
   READ TABLE it_unique_mitigation INTO DATA(lwa_mitigation) INDEX cv_mitigation_count.
@@ -317,6 +346,8 @@ ENDMETHOD.
 
 
 METHOD get_unique_mitigation_owner.
+* De-duplicates the mitigation owners and returns the unique list and its
+* count - the input to the get_single_mitigation_owner iterator.
   CLEAR: et_unique_mitigation, ev_mitigation_count.
 
   et_unique_mitigation = it_mitigation_owner.
@@ -328,7 +359,9 @@ ENDMETHOD.
 
 
 METHOD role_owner_approval.
-
+* Resolves the workflow initiator (role owner) e-mail from PUSER002 and
+* returns it together with the approved roles, for the approval
+* notification.
   CLEAR: es_role_owner, et_roles.
 
   DATA(lv_initiator) = iv_wf_initiator.
@@ -349,7 +382,9 @@ ENDMETHOD.
 
 
 METHOD role_owner_rejection.
-
+* Counterpart of role_owner_approval: resolves the initiator e-mail and
+* returns the rejected roles together with their rejection reasons
+* (ZACG_REQ_APROVER status 4) for the rejection notification.
   CLEAR: et_rejection_reason, es_role_owner, et_roles.
 
   DATA(lv_initiator) = iv_wf_initiator.
