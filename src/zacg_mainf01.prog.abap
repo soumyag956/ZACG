@@ -1664,10 +1664,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_9001
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Main driver for the Role Risk Analysis screen (9001).
+*&
+*& Reads the selection-screen settings (role type S/C, risk levels
+*& L0-L4, modules, summary vs detail, simulation flag/file) and calls
+*& the risk-analysis function module ZACG_RISK_ROLES. Depending on the
+*& result it shows the summary (screen 8001), detail (8002) or offers an
+*& Excel download when the selection is too large to render online.
+*& Handles the simulation upload path as well.
 *&---------------------------------------------------------------------*
 FORM user_command_9001.
 
