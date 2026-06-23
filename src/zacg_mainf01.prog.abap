@@ -531,10 +531,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form f_dld_user_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Lets the user pick a folder and downloads the "Create User" Excel
+*& template there. The empty template is produced by XSLT transformation
+*& ZSEC_XSLT_USER_TEMPLATE and written with GUI_DOWNLOAD.
+*& Front-end only (uses CL_GUI_FRONTEND_SERVICES / GUI_DOWNLOAD).
 *&---------------------------------------------------------------------*
 FORM f_dld_user_template .
 
@@ -606,10 +606,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form p_file2_validate
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the password-reset upload file (P_FILE2) at AT SELECTION
+*& SCREEN time. Confirms the file is supplied, has an .XLS extension and
+*& that the first two header cells read 'User ID' and 'Password'. On any
+*& failure it clears sy-ucomm / g_ucomm and raises an error message so
+*& the action is not executed.
 *&---------------------------------------------------------------------*
 FORM p_pwfile_validate .
   TYPES: BEGIN OF lty_std_role,
@@ -678,10 +679,19 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form set_init_password
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass password set/reset from the uploaded Excel file (P_FILE2).
+*&
+*& For each "User ID / Password" row:
+*&   - blank password  -> BAPI_USER_CHANGE with GENERATE_PWD (system
+*&     generates a password),
+*&   - filled password -> BAPI_USER_CHANGE sets that password.
+*& On success the new password is e-mailed to the user's SMTP address
+*& (looked up via USR21 / ADR6) using CL_BCS. Per-user status is shown
+*& in ALV grid on screen 9007 (GT_PWD_OUTPUT).
+*&
+*& KNOWN ISSUES (see code review): the BCS sender address is hard-coded,
+*& the password is sent in clear text, and lt_return[ 1 ] is read without
+*& a guard.
 *&---------------------------------------------------------------------*
 FORM set_reset_password_mass .
   TYPES: BEGIN OF lty_std_role,
@@ -920,6 +930,16 @@ FORM set_reset_password_mass .
   ENDIF.
 
 ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form set_reset_password_manual
+*&---------------------------------------------------------------------*
+*& Manual password set/reset for the users entered in select-option
+*& SO_UPW. Behaves like SET_RESET_PASSWORD_MASS but takes the users and
+*& the single password P_PWD from the selection screen instead of a
+*& file: blank P_PWD generates a password, otherwise P_PWD is set. The
+*& new password is e-mailed to each user and results are shown in the
+*& screen 9007 ALV grid. Same known issues as the mass variant.
+*&---------------------------------------------------------------------*
 FORM set_reset_password_manual .
   TYPES: BEGIN OF lty_std_role,
            uname TYPE xubname,
@@ -1123,10 +1143,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form f_pwfile_template
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Lets the user pick a folder and downloads the "Password Reset" Excel
+*& template (XSLT ZSEC_XSLT_PWD_TEMPLATE) via GUI_DOWNLOAD.
+*& Front-end only.
 *&---------------------------------------------------------------------*
 FORM f_pwfile_template .
   DATA : lv_path TYPE string,
