@@ -14978,7 +14978,12 @@ FORM adjust_fieldcatalog .
       it_fieldcatalog = li_fieldcat.
 
 ENDFORM.
-
+*&---------------------------------------------------------------------*
+*& Form show_result_9030
+*&---------------------------------------------------------------------*
+*& Display helper: shows the bulk-request file validation errors
+*& (I_OUTTAB_9030: row number / error message) in the screen-9030 ALV.
+*&---------------------------------------------------------------------*
 FORM show_result_9030.
 
 
@@ -15043,10 +15048,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form raise_bulk_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Raises a bulk (multi-user) access request from the uploaded data
+*& (I_FILE_DATA_9030).
+*&
+*& Draws a bulk request number (ZACG_BREQ -> 'BRQ...') and child request
+*& numbers (ZACG_CREQ), builds the approver rows (ZACG_REQ_APROVER) and
+*& the bulk-to-child mapping (ZACG_REQ_BLK_MAP), and saves them.
+*& Side effect: inserts request/approver/mapping rows in the database.
 *&---------------------------------------------------------------------*
 FORM raise_bulk_request.
 
@@ -15419,11 +15427,14 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_message_dins
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> LO_MSG_BUFFER
-*&      --> LWA_NODE_ROOT_>ROLE
-*&      --> P_
+*& Collects the result messages from a deactivate/activate-instance mass
+*& maintenance run (PFCG message buffer) into the GT_AUTH_VAL result
+*& table, producing a Success line per role when the buffer is empty or
+*& mapping the buffer messages to Success/Error otherwise.
+*&   -->  IO_MSG_BUFFER  PFCG message buffer of the operation.
+*&   -->  IV_ROLE        Role the messages relate to (blank = all).
+*&   -->  IV_OBJECT      Authorization object processed.
+*&   -->  IV_AUTH        Authorization instance processed.
 *&---------------------------------------------------------------------*
 FORM update_message_dins  USING io_msg_buffer TYPE REF TO if_spcg_msg_buffer
                                 iv_role       TYPE agr_name
@@ -15484,10 +15495,13 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form cancel_req_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Admin cancellation of selected request line items (screen 9037).
+*&
+*& For each selected, not-yet-actioned row it marks the current
+*& ZACG_REQ_APROVER entry as actioned and appends a follow-up row with
+*& status 05 (cancelled), approver_role 3 (admin) and the next sequence
+*& number, then commits and refreshes the grid (get_data_9037).
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM cancel_req_9037 .
 
@@ -15562,16 +15576,17 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form approve_req_9037
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Admin approval of selected request line items (screen 9037).
+*&
+*& For each selected, not-yet-actioned row it marks the current
+*& ZACG_REQ_APROVER entry as actioned and appends a follow-up admin
+*& approval row, then commits and refreshes the grid. Also checks role
+*& ownership (ZACG_ROLE_OWNERS) before approving.
+*& Side effect: updates approver rows in the database.
 *&---------------------------------------------------------------------*
 FORM approve_req_9037 .
 
   DATA : lv_message  TYPE string.
-
-  BREAK : rounak.
 
   o_grid_9037->get_selected_rows(
     IMPORTING
