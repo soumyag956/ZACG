@@ -10750,10 +10750,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9029
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the "new request" screen (9031): requires a user id
+*& (P_NUSER) that is a valid, active, unlocked, non-expired dialog/system
+*& user (USR02) and at least one role in S_NROLE. Blocks the action on
+*& any failure.
 *&---------------------------------------------------------------------*
 FORM validate_9029.
 
@@ -10855,10 +10855,9 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9030
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the bulk-request upload file (P_FILE30, columns User / Role
+*& / Start Date / End Date). Reads the file, checks the layout and row
+*& data and records any problems in I_OUTTAB_9030 (shown on screen 9030).
 *&---------------------------------------------------------------------*
 FORM validate_9030.
 
@@ -13622,10 +13621,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9033
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI validation/dispatch for the firefighter console (screen 9033).
+*& On the login (&LGN) / logout function codes it reads the cursor row
+*& from I_OUTTAB_9033, guards that a session can only be logged off by
+*& the user who started it, and copies the row into
+*& WA_SELECTED_LINE_9033 for emergency_login / emergency_logout.
 *&---------------------------------------------------------------------*
 FORM validate_9033.
 
@@ -14321,10 +14321,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9035
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the FFID transaction-log review selection (screen 9035):
+*& requires a date range (S_DAT35) before the log can be read.
 *&---------------------------------------------------------------------*
 FORM validate_9035.
 
@@ -15700,10 +15698,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9041
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the mass authorization-value maintenance upload(s) for
+*& screen 9041: a role/auth-value file (columns Role / Object / Field
+*& name / Authorization value) and/or a user/role file (columns User /
+*& Role). Reads the file(s), checks the layout and records any problems
+*& for display before the maintenance is run.
 *&---------------------------------------------------------------------*
 FORM validate_9041 .
 
@@ -16172,10 +16171,10 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_9042
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the mass authorization-value maintenance upload for screen
+*& 9042 (columns Role / Object / Field name / Authorization value). Reads
+*& the file, checks the layout and records any problems for display
+*& before the maintenance is run.
 *&---------------------------------------------------------------------*
 FORM validate_9042 .
 
