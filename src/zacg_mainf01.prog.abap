@@ -68,6 +68,23 @@ FORM fill_node CHANGING li_node_table TYPE ty_node_table_type.
 
 ENDFORM.
 
+*&---------------------------------------------------------------------*
+*& Form authority_check
+*&---------------------------------------------------------------------*
+*& Checks whether the current user is authorized for the tree node
+*& identified by KEY. The authorization object name is derived by
+*& prefixing the node key with 'ZACG_' (e.g. key 'CROL' -> 'ZACG_CROL')
+*& and the standard activity 16 (display/execute) is checked.
+*&
+*&   -->  KEY    Tree node key (max 5 chars so 'ZACG_' + KEY fits the
+*&               10-char XUOBJECT name).
+*&   <--  VALID  ABAP_TRUE when the user passes the check, otherwise
+*&               left unchanged.
+*&
+*& NOTE: every guarded node's object must expose field ACTVT, otherwise
+*& AUTHORITY-CHECK returns sy-subrc = 2 (object/field unknown) and the
+*& node is treated as not authorized.
+*&---------------------------------------------------------------------*
 FORM authority_check USING key TYPE tv_nodekey CHANGING valid TYPE flag.
 
   DATA: lv_object TYPE xuobject.
@@ -84,10 +101,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_1000
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the main screen 1000. Leaves the screen on the
+*& BACK / EXIT / CANCEL function codes.
 *&---------------------------------------------------------------------*
 FORM user_command_1000 .
 
@@ -108,10 +123,20 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form create_user
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Mass-creates SAP users from the uploaded Excel template.
+*&
+*& Flow:
+*&   1. Reads the spreadsheet (ALSMEX) into an internal table.
+*&   2. For each user id (AT END OF userid) builds the logon, address,
+*&      default, SNC and licence data and calls:
+*&        - BAPI_USER_CREATE1          (create the user + password)
+*&        - BAPI_USER_ACTGROUPS_ASSIGN (assign roles, if supplied)
+*&        - BAPI_USER_PROFILES_ASSIGN  (assign profiles, if supplied)
+*&        - BAPI_TRANSACTION_COMMIT    (persist the changes)
+*&   3. Collects per-user status messages in GT_USER_OUTPUT and shows
+*&      them in an ALV grid.
+*&
+*& Side effects: creates users and commits to the database.
 *&---------------------------------------------------------------------*
 FORM create_user .
 
@@ -379,9 +404,15 @@ FORM create_user .
 
       ls_output-userid = lv_userid.
       ls_output-gen_pw = ls_gen_pw-bapipwd.
-      ls_output-user_msg = lt_return_user[ 1 ]-message.
-      IF lt_return_user[ 1 ]-type = 'E'.
-        CLEAR ls_output-gen_pw.
+*     Read the first BAPI message defensively. Direct index access
+*     ( lt_return_user[ 1 ] ) raises CX_SY_ITAB_LINE_NOT_FOUND when the
+*     BAPI returns no messages, so READ TABLE with an sy-subrc check is used.
+      READ TABLE lt_return_user INTO DATA(ls_ret_user) INDEX 1.
+      IF sy-subrc = 0.
+        ls_output-user_msg = ls_ret_user-message.
+        IF ls_ret_user-type = 'E'.
+          CLEAR ls_output-gen_pw.
+        ENDIF.
       ENDIF.
 
       IF lt_role IS NOT INITIAL.
@@ -392,7 +423,10 @@ FORM create_user .
             activitygroups = lt_role
             return         = lt_return_role.
 
-        ls_output-role_msg = lt_return_role[ 1 ]-message.
+        READ TABLE lt_return_role INTO DATA(ls_ret_role) INDEX 1.
+        IF sy-subrc = 0.
+          ls_output-role_msg = ls_ret_role-message.
+        ENDIF.
       ELSE.
         ls_output-role_msg = 'No Role has been provided for this user'.
       ENDIF.
@@ -405,10 +439,21 @@ FORM create_user .
             profiles = lt_profile
             return   = lt_return_prof.
 
-        ls_output-prof_msg = lt_return_prof[ 1 ]-message.
+        READ TABLE lt_return_prof INTO DATA(ls_ret_prof) INDEX 1.
+        IF sy-subrc = 0.
+          ls_output-prof_msg = ls_ret_prof-message.
+        ENDIF.
       ELSE.
         ls_output-prof_msg = 'No Profile has been provided for this user'.
       ENDIF.
+
+*     BAPI_USER_* functions register their work on the update task but do
+*     not commit. Without an explicit commit the user / role / profile
+*     assignment is never persisted even though the BAPI returns success.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+        EXPORTING
+          wait = abap_true.
+
       APPEND ls_output TO gt_user_output.
       CLEAR: lv_userid, ls_logondata, ls_password, ls_default,
              ls_address, ls_snc, ls_uclass, ls_gen_pw, lt_param,
