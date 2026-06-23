@@ -13427,9 +13427,11 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form lock_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_8007
+*& Locks an access request (ENQUEUE_EZACG_REQ_APRV) so two approvers
+*& cannot process it at the same time.
+*&   -->  FP_REQUEST  Request number to lock.
+*&   <--  FP_MESSAGE  Set to ABAP_TRUE if the lock could not be acquired
+*&                    (a message is also displayed).
 *&---------------------------------------------------------------------*
 FORM enqueue_request  USING    fp_request   TYPE zacg_acc_req
                       CHANGING fp_message   TYPE string.
@@ -13456,9 +13458,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form deque_request
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*&      --> P_
+*& Releases the lock on an access request (DEQUEUE_EZACG_REQ_APRV).
+*&   -->  FP_REQUEST  Request number to unlock.
 *&---------------------------------------------------------------------*
 FORM dequeue_request USING fp_request TYPE zacg_acc_req.
 
@@ -13470,10 +13471,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form validate_7004
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Validates the manager rejection-reason pop-up (screen 7004):
+*& GV_REJECTION_REASON must be supplied and longer than 10 characters.
 *&---------------------------------------------------------------------*
 FORM validate_7004 .
 
@@ -13493,10 +13492,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form user_command_7004
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& PAI handler for the manager rejection pop-up (screen 7004). Leaves on
+*& EXIT/CANC; on OKAY leaves and calls update_rejection_from_manager.
 *&---------------------------------------------------------------------*
 FORM user_command_7004 .
 
@@ -13516,10 +13513,8 @@ ENDFORM.
 *&---------------------------------------------------------------------*
 *& Form update_rejection_from_manager
 *&---------------------------------------------------------------------*
-*& text
-*&---------------------------------------------------------------------*
-*& -->  p1        text
-*& <--  p2        text
+*& Intended to persist a manager's rejection of a request. Currently an
+*& empty placeholder (no implementation).
 *&---------------------------------------------------------------------*
 FORM update_rejection_from_manager .
 
