@@ -1,0 +1,10 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_9035.
+  CALL SUBSCREEN sub_9035 INCLUDING sy-repid g_subscr_nn.
+
+PROCESS AFTER INPUT.
+  CALL SUBSCREEN sub_9035.
+  CHAIN.
+    MODULE validate_9035.
+  ENDCHAIN.
+  MODULE user_command_9035.

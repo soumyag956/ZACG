@@ -1,0 +1,162 @@
+<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:sap="http://www.sap.com/sapxsl" version="1.0">
+  <xsl:strip-space elements="*"/>
+  <xsl:template match="/">
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html=
+"http://www.w3.org/TR/REC-html40">
+      <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+        <Author>Rounak Pal</Author>
+        <LastAuthor>Rounak Pal (IN)</LastAuthor>
+        <Created>2015-06-05T18:17:20Z</Created>
+        <LastSaved>2023-10-05T15:53:02Z</LastSaved>
+        <Version>16.00</Version>
+      </DocumentProperties>
+      <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+        <WindowHeight>10800</WindowHeight>
+        <WindowWidth>20460</WindowWidth>
+        <WindowTopX>30</WindowTopX>
+        <WindowTopY>32767</WindowTopY>
+        <ProtectStructure>False</ProtectStructure>
+        <ProtectWindows>False</ProtectWindows>
+      </ExcelWorkbook>
+      <Styles>
+        <Style ss:ID="Default" ss:Name="Normal">
+          <Alignment ss:Vertical="Bottom"/>
+          <Borders/>
+          <Font ss:Color="#000000" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior/>
+          <NumberFormat/>
+          <Protection/>
+        </Style>
+        <Style ss:ID="s62">
+          <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <Font ss:Color="#000000" ss:FontName="Calibri" ss:Size="11" x:Family="Swiss"/>
+          <Interior ss:Color="#FFFF00" ss:Pattern="Solid"/>
+        </Style>
+        <Style ss:ID="s64">
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+        </Style>
+        <Style ss:ID="s71">
+          <Borders>
+            <Border ss:LineStyle="Continuous" ss:Position="Bottom" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Left" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Right" ss:Weight="1"/>
+            <Border ss:LineStyle="Continuous" ss:Position="Top" ss:Weight="1"/>
+          </Borders>
+          <NumberFormat ss:Format="00"/>
+        </Style>
+      </Styles>
+      <Worksheet ss:Name="Sheet1">
+        <Table ss:DefaultRowHeight="15" ss:ExpandedColumnCount="6" ss:ExpandedRowCount="4" x:FullColumns="1" x:FullRows="1">
+          <Column ss:Width="78.5"/>
+          <Column ss:Width="75.5"/>
+          <Column ss:Span="1" ss:Width="51"/>
+          <Column ss:Index="5" ss:Width="30"/>
+          <Column ss:Width="32.5"/>
+          <Row ss:AutoFitHeight="0" ss:Height="30">
+            <Cell ss:StyleID="s62">
+              <Data ss:Type="String">Role</Data>
+            </Cell>
+            <Cell ss:StyleID="s62">
+              <Data ss:Type="String">Object</Data>
+            </Cell>
+            <Cell ss:StyleID="s62">
+              <Data ss:Type="String">Field</Data>
+            </Cell>
+            <Cell ss:StyleID="s62">
+              <Data ss:Type="String">Instance</Data>
+            </Cell>
+            <Cell ss:StyleID="s62">
+              <Data ss:Type="String">Value</Data>
+            </Cell>
+          </Row>
+          <Row ss:AutoFitHeight="0">
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">ZPARENT_TEST1</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">M_MATE_MAR</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">BEGRU</Data>
+            </Cell>
+            <Cell ss:StyleID="s71">
+              <Data ss:Type="Number">0</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="Number">400</Data>
+            </Cell>
+          </Row>
+          <Row ss:AutoFitHeight="0">
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">ZPARENT_TEST1</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">M_MATE_WGR</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">BEGRU</Data>
+            </Cell>
+            <Cell ss:StyleID="s71">
+              <Data ss:Type="Number">1</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="Number">200</Data>
+            </Cell>
+          </Row>
+          <Row ss:AutoFitHeight="0">
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">ZPARENT_TEST1</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">S_DATASET</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="String">FILENAME</Data>
+            </Cell>
+            <Cell ss:StyleID="s71">
+              <Data ss:Type="Number">2</Data>
+            </Cell>
+            <Cell ss:StyleID="s64">
+              <Data ss:Type="Number">1111</Data>
+            </Cell>
+          </Row>
+        </Table>
+        <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+          <PageSetup>
+            <Header x:Margin="0.3"/>
+            <Footer x:Margin="0.3"/>
+            <PageMargins x:Bottom="0.75" x:Left="0.7" x:Right="0.7" x:Top="0.75"/>
+          </PageSetup>
+          <Unsynced/>
+          <Print>
+            <ValidPrinterInfo/>
+            <PaperSizeIndex>9</PaperSizeIndex>
+            <HorizontalResolution>600</HorizontalResolution>
+            <VerticalResolution>0</VerticalResolution>
+          </Print>
+          <Selected/>
+          <Panes>
+            <Pane>
+              <Number>3</Number>
+              <ActiveRow>12</ActiveRow>
+              <ActiveCol>12</ActiveCol>
+            </Pane>
+          </Panes>
+          <ProtectObjects>False</ProtectObjects>
+          <ProtectScenarios>False</ProtectScenarios>
+        </WorksheetOptions>
+      </Worksheet>
+    </Workbook>
+  </xsl:template>
+</xsl:transform>

@@ -1,0 +1,8 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_9022.
+  CALL SUBSCREEN mbs INCLUDING sy-repid g_subscr_nn.
+
+
+PROCESS AFTER INPUT.
+  CALL SUBSCREEN mbs.
+  MODULE user_command_9022.

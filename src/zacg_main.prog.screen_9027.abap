@@ -1,0 +1,7 @@
+PROCESS BEFORE OUTPUT.
+  MODULE status_9027.
+  CALL SUBSCREEN cufr INCLUDING sy-repid g_subscr_nn.
+
+PROCESS AFTER INPUT.
+  CALL SUBSCREEN cufr.
+  MODULE user_command_9027.
